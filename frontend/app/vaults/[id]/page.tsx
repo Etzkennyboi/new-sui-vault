@@ -205,6 +205,13 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
         </div>
       </header>
 
+      {currentAccount && !currentAccount.chains.includes('sui:mainnet') && (
+        <div className="bg-[#B829EA]/15 border-b border-[#B829EA]/30 text-white py-3.5 px-6 text-center text-sm font-sans font-semibold relative z-40 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(184,41,234,0.1)]">
+          <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+          ⚠️ wallet is on non-Mainnet network. Please switch to Mainnet in your wallet extension.
+        </div>
+      )}
+
       {/* Terminal Layout */}
       <main className="flex-grow max-w-[1400px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
         

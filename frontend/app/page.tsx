@@ -2,13 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ConnectButton } from '@mysten/dapp-kit';
+import { ConnectButton, useCurrentAccount } from '@mysten/dapp-kit';
 import { Shield, Database, Cpu, ExternalLink, ArrowRight } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
 
 import { officialVaults } from '../lib/config/vaults';
 
 export default function LandingPage() {
+  const currentAccount = useCurrentAccount();
   const vaults = officialVaults;
 
   const containerVariants: Variants = {
@@ -56,6 +57,13 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+
+      {currentAccount && !currentAccount.chains.includes('sui:mainnet') && (
+        <div className="bg-[#B829EA]/15 border-b border-[#B829EA]/30 text-white py-3.5 px-6 text-center text-sm font-sans font-semibold relative z-40 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(184,41,234,0.1)]">
+          <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+          ⚠️ wallet is on non-Mainnet network. Please switch to Mainnet in your wallet extension.
+        </div>
+      )}
 
       {/* Hero Section */}
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20 flex flex-col items-center justify-center text-center relative z-10 w-full">
