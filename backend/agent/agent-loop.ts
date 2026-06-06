@@ -1,11 +1,11 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { SuiSyndicateClient } from '../sdk/src/client';
-import { WalrusClient } from '../sdk/src/walrus';
-import { createTatumClient } from '../sdk/src/tatum';
+import { SuiSyndicateClient } from '../../sdk/src/client';
+import { WalrusClient } from '../../sdk/src/walrus';
+import { createTatumClient } from '../../sdk/src/tatum';
 
 // Load environment variables
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY || '';
 const TATUM_API_KEY = process.env.TATUM_API_KEY || '';
@@ -162,8 +162,17 @@ async function runAgent() {
       const vaultState = await sdk.getVaultState(VAULT_ID);
       console.log(`Vault Status: Sui Bal = ${vaultState.suiBalance / 1e9} SUI, USDC Bal = ${vaultState.usdcBalance / 1e6} USDC`);
 
-      console.log(`Downloading strategy manifest: ${vaultState.strategyBlobId}...`);
-      const strategy = await walrusClient.getBlob(vaultState.strategyBlobId);
+      console.log(`Downloading strategy manifest:`);
+      let strategy: any = {};
+      try {
+        strategy = await walrusClient.getBlob(vaultState.strategyBlobId);
+      } catch (e: any) {
+        console.log(`Failed to download strategy manifest: ${e.message}. Using fallback strategy.`);
+        strategy = {
+          strategy_type: "fallback",
+          parameters: {}
+        };
+      }
       console.log(`Loaded Strategy Type: ${strategy.strategy_type || 'Unknown'}`);
 
       console.log('Fetching live SUI price from Pyth Hermes Network...');

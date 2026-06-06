@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ConnectButton, useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { ConnectButton, useCurrentAccount, useSignAndExecuteTransaction, useSuiClient, useSuiClientQuery } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import { Loader2, ArrowLeft, TrendingUp, ShieldCheck, Database, RefreshCw, Activity, Terminal, ArrowRightLeft, Cpu, CheckCircle2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { WalrusClient } from '../../../../sdk/src/walrus';
+import { SuiSyndicateClient } from '../../../../sdk/src/client';
+import { createTatumClient } from '../../../../sdk/src/tatum';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID || '0x8509610948b6437c3a9dd841af6f1083a3481adaa521625d18c90d08e05b10e9';
@@ -14,16 +16,6 @@ const WALRUS_PUBLISHER = 'https://publisher.walrus-testnet.walrus.space';
 const WALRUS_AGGREGATOR = 'https://aggregator.walrus-testnet.walrus.space';
 
 import { officialVaults } from '../../../lib/config/vaults';
-
-// Mock chart data for premium visual effect
-const generateChartData = () => {
-  let base = 1000;
-  return Array.from({ length: 30 }).map((_, i) => {
-    base = base + (Math.random() * 200 - 90);
-    return { name: `Day ${i + 1}`, TVL: Math.max(100, base) };
-  });
-};
-const chartData = generateChartData();
 
 export default function VaultDashboard({ params }: { params: Promise<{ id: string }> }) {
   const currentAccount = useCurrentAccount();
@@ -43,8 +35,13 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
   const [depositAmount, setDepositAmount] = useState('10');
   const [shareObjectId, setShareObjectId] = useState('');
 
-  // Logs state
+  // User's shares for this vault
+  const [ownedShares, setOwnedShares] = useState<any[]>([]);
+  const [loadingShares, setLoadingShares] = useState(false);
+
+  // Logs and Chart state
   const [logs, setLogs] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<any[]>([{ name: 'Genesis', TVL: 0 }]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
   // Verification modal state
@@ -58,47 +55,105 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
   const [vaultTotalShares, setVaultTotalShares] = useState<number | null>(null);
 
   const suiClient = useSuiClient();
+  
+  const { data: suiBalance } = useSuiClientQuery('getBalance', {
+    owner: currentAccount?.address as string,
+  }, {
+    enabled: !!currentAccount,
+  });
+  const formattedSuiBalance = suiBalance ? (Number(suiBalance.totalBalance) / 1e9).toFixed(2) : '0.00';
 
   useEffect(() => {
     setMounted(true);
     fetchLogs();
   }, []);
 
-  useEffect(() => {
-    if (!vaultId) return;
-    const fetchVaultState = async () => {
-      try {
-        const raw = await suiClient.getObject({
-          id: vaultId,
-          options: { showContent: true },
-        });
-        if (raw.data?.content && 'fields' in raw.data.content) {
-          const fields = raw.data.content.fields as any;
-          setVaultSuiBal(parseInt(fields.sui_balance || '0'));
-          setVaultUsdcBal(parseInt(fields.usdc_balance || '0'));
-          setVaultTotalShares(parseInt(fields.total_shares || '0'));
-        }
-      } catch (err: any) {
-        // Warning: This is commonly triggered by browser adblockers (like chrome-extension://eppiocemhmnlbhjplcgkofciiegomcon) blocking Tatum RPC.
-        console.warn('Failed to fetch vault state (possibly blocked by extension):', err.message || err);
+  const fetchUserShares = async () => {
+    if (!currentAccount || !vaultId || !suiClient) return;
+    setLoadingShares(true);
+    try {
+      const response = await suiClient.getOwnedObjects({
+        owner: currentAccount.address,
+        filter: { StructType: `${PACKAGE_ID}::vault::SyndicateShare` },
+        options: { showContent: true },
+      });
+      
+      const shares = response.data.map((obj: any) => {
+        const content = obj.data?.content as any;
+        return {
+          id: obj.data?.objectId,
+          vault_id: content?.fields?.vault_id,
+          shares: content?.fields?.shares,
+        };
+      }).filter((share: any) => share.vault_id === vaultId);
+      
+      setOwnedShares(shares);
+      if (shares.length > 0) {
+        // Auto-select the first share if none is selected or if current is invalid
+        setShareObjectId(prev => shares.some((s: any) => s.id === prev) ? prev : shares[0].id);
+      } else {
+        setShareObjectId('');
       }
-    };
+    } catch (err) {
+      console.error('Failed to fetch user shares:', err);
+    } finally {
+      setLoadingShares(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentAccount && vaultId) {
+      fetchUserShares();
+    }
+  }, [currentAccount, vaultId, activeTab, suiClient]);
+
+  const fetchVaultState = async () => {
+    if (!vaultId) return;
+    try {
+      const raw = await suiClient.getObject({
+        id: vaultId,
+        options: { showContent: true },
+      });
+      if (raw.data?.content && 'fields' in raw.data.content) {
+        const fields = raw.data.content.fields as any;
+        setVaultSuiBal(parseInt(fields.sui_balance || '0'));
+        setVaultUsdcBal(parseInt(fields.usdc_balance || '0'));
+        setVaultTotalShares(parseInt(fields.total_shares || '0'));
+      }
+    } catch (err: any) {
+      console.warn('Failed to fetch vault state (possibly blocked by extension):', err.message || err);
+    }
+  };
+
+  useEffect(() => {
     fetchVaultState();
   }, [vaultId, suiClient]);
 
   const fetchLogs = async () => {
+    if (!vaultId) return;
     setLoadingLogs(true);
     try {
-      // Mocking live logs for display
-      const liveLogs = [
-        {
-          blobId: 'gH7B_8F2nKp_Lm3s', epoch: 1042, action_taken: 'BUY_SUI', ai_reasoning: 'SUI has dropped 5% in the last hour, reaching the lower bollinger band. Executing buy order to accumulate SUI.', balances: { sui: 2500000000, usdc: 1500000 }, timestamp: new Date().toISOString()
-        },
-        {
-          blobId: 'xP9J_1D4vCq_Rt5w', epoch: 1041, action_taken: 'SELL_SUI', ai_reasoning: 'RSI indicates overbought conditions. Taking 10% profit into USDC to prepare for potential pullbacks.', balances: { sui: 1500000000, usdc: 2800000 }, timestamp: new Date(Date.now() - 3600000).toISOString()
-        }
-      ];
-      setLogs(liveLogs);
+      const TARGET_COIN_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
+      const sdk = new SuiSyndicateClient(
+        createTatumClient({ apiKey: '', rpcUrl: 'https://sui-mainnet.gateway.tatum.io' }),
+        new WalrusClient(WALRUS_PUBLISHER, WALRUS_AGGREGATOR),
+        { packageId: PACKAGE_ID, factoryId: 'dummy', targetCoinType: TARGET_COIN_TYPE }
+      );
+      
+      const realLogs = await sdk.getVaultLogs(vaultId);
+      setLogs(realLogs);
+      
+      const newChartData = realLogs.map((log: any, i: number) => {
+        const tvlSui = (log.balances?.sui || 0) / 1e9;
+        const tvlUsdc = (log.balances?.usdc || 0) / 1e6;
+        const price = log.prices?.SUI_USDC || 1;
+        const tvlInUsdc = (tvlSui * price) + tvlUsdc;
+        return { name: `Action ${i + 1}`, TVL: parseFloat(tvlInUsdc.toFixed(2)) };
+      }).reverse();
+      
+      if (newChartData.length > 0) {
+        setChartData(newChartData);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -127,7 +182,17 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
 
       await signAndExecuteTransaction({ transaction: txb as any });
       alert('Deposit successful!');
+      
+      // Instantly trigger AI rebalance API
+      try {
+        await fetch(`/api/vaults/${vaultId}/rebalance`, { method: 'POST' });
+      } catch (err) {
+        console.error('Failed to trigger agent:', err);
+      }
+      
       fetchLogs();
+      fetchUserShares();
+      fetchVaultState();
     } catch (err: any) {
       console.error(err);
       alert(`Deposit failed: ${err.message || 'Unknown error'}`);
@@ -157,6 +222,8 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
 
       await signAndExecuteTransaction({ transaction: txb as any });
       alert('Ragequit completed!');
+      fetchUserShares();
+      fetchVaultState();
     } catch (err: any) {
       console.error(err);
       alert(`Ragequit failed: ${err.message || 'Unknown error'}`);
@@ -390,7 +457,7 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
                         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Amount</label>
-                        <span className="text-xs text-slate-500 font-mono">Bal: 0.00 SUI</span>
+                        <span className="text-xs text-slate-500 font-mono">Bal: {formattedSuiBalance} SUI</span>
                       </div>
                       <div className="relative group">
                         <input 
@@ -439,16 +506,45 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
                   >
                     <div className="mb-6">
                       <div className="flex justify-between items-center mb-2">
-                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Share Object ID</label>
+                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Share Object</label>
                       </div>
-                      <input 
-                        type="text" 
-                        value={shareObjectId} 
-                        onChange={(e) => setShareObjectId(e.target.value)}
-                        className="w-full px-4 py-4 bg-[#05050A] border border-[#1E293B] hover:border-[#B829EA]/50 focus:border-[#B829EA] rounded-xl text-sm font-mono text-white focus:outline-none transition-colors shadow-inner"
-                        placeholder="0x..."
-                      />
-                      <p className="text-[11px] text-slate-500 mt-2">Enter the ID of the SyndicateShare token you received upon deposit.</p>
+                      
+                      {!currentAccount ? (
+                        <div className="w-full px-4 py-4 bg-[#05050A] border border-[#1E293B] rounded-xl text-sm text-slate-500 text-center">
+                          Connect wallet to view your shares
+                        </div>
+                      ) : loadingShares ? (
+                        <div className="w-full px-4 py-4 bg-[#05050A] border border-[#1E293B] rounded-xl text-sm flex items-center justify-center gap-2 text-slate-400">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Fetching shares...
+                        </div>
+                      ) : ownedShares.length === 0 ? (
+                        <div className="w-full px-4 py-4 bg-[#05050A] border border-red-500/20 rounded-xl text-sm text-red-400 text-center">
+                          You do not own any shares in this vault.
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <select 
+                            value={shareObjectId} 
+                            onChange={(e) => setShareObjectId(e.target.value)}
+                            className="w-full px-4 py-4 bg-[#05050A] border border-[#1E293B] hover:border-[#B829EA]/50 focus:border-[#B829EA] rounded-xl text-sm font-mono text-white focus:outline-none transition-colors shadow-inner appearance-none"
+                          >
+                            {ownedShares.map((share, idx) => (
+                              <option key={share.id} value={share.id}>
+                                Share #{idx + 1} ({share.shares} shares) - {share.id.slice(0, 10)}...{share.id.slice(-6)}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <p className="text-[11px] text-slate-500 mt-2">
+                        {ownedShares.length > 0 
+                          ? "Select the share object you wish to withdraw." 
+                          : "Your vault shares will automatically appear here once you deposit."}
+                      </p>
                     </div>
 
                     <div className="bg-[#B829EA]/10 border border-[#B829EA]/20 rounded-xl p-4 mb-8">
