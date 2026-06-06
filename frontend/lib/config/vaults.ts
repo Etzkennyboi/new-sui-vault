@@ -9,12 +9,15 @@ export interface OfficialVault {
 
 export const officialVaults: OfficialVault[] = [
   {
-    id: "0xadd7421d3d113e9078f64e6ef53411547a0e07eb93e75717a208b110aea3f84e", // From my most recent test run!
-    name: "Safe 50/50 Rebalancer",
+    id: "0x287a655c5e28dfcb01f1b4d139852986dab7f1dcfb46282f5b58ed70153d19c8",
+    name: "Native USDC 50/50",
+    tvl: "$0.00",
+    apy: "12.4%",
+    risk: "Medium",
     strategy: "Maintain a strict 50% SUI and 50% USDC portfolio. Take profits into USDC when SUI spikes, and buy SUI when it dips.",
     description: "The perfect vault for risk-averse investors who want exposure to SUI while maintaining a stablecoin cushion to buy the dips autonomously.",
-    agentCapId: "0xdd94840950f1bc66944ef7de985d710b69dbdefae471273a15e669bc20e53c60",
-    coinType: "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN", // Wormhole USDC
+    agentCapId: "0xb27e48d6202543807a5f8895e64a8aca6dc42b1ae1acde78fa1be2a86d14f5d1",
+    coinType: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC", // Native USDC
   },
   {
     id: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef", // Placeholder

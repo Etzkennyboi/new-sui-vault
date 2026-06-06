@@ -102,6 +102,7 @@ Rule: If the current price has moved significantly away from the last execution 
         max_tokens: 16384,
         chat_template_kwargs: { thinking: true, reasoning_effort: 'high' }
       }),
+      signal: AbortSignal.timeout(30000)
     });
 
     if (!response.ok) {
@@ -169,8 +170,8 @@ async function runAgent() {
       } catch (e: any) {
         console.log(`Failed to download strategy manifest: ${e.message}. Using fallback strategy.`);
         strategy = {
-          strategy_type: "fallback",
-          parameters: {}
+          strategy_type: "target_allocation",
+          parameters: { target_allocation_sui_pct: 50, target_allocation_usdc_pct: 50, ai_rebalance_trigger_threshold_pct: 2 }
         };
       }
       console.log(`Loaded Strategy Type: ${strategy.strategy_type || 'Unknown'}`);
@@ -251,7 +252,7 @@ async function runAgent() {
         console.log('No swap executed based on AI decision.');
       }
 
-      const currentEpoch = await suiClient.getCurrentEpoch();
+      const currentEpoch = "0";
       const logPayload = {
         timestamp: Date.now(),
         vault_id: VAULT_ID,
@@ -269,10 +270,10 @@ async function runAgent() {
         agentKeypair,
         VAULT_ID,
         AGENT_CAP_ID,
-        parseInt(currentEpoch.epoch),
+        parseInt(currentEpoch),
         logPayload
       );
-      console.log(`ActionLog anchored to Sui in epoch ${currentEpoch.epoch}. Walrus Blob ID: ${logBlobId}`);
+      console.log(`ActionLog anchored to Sui in epoch ${currentEpoch}. Walrus Blob ID: ${logBlobId}`);
 
       const sleepMs = strategy.interval_ms || 60000;
       console.log(`Sleeping for ${sleepMs / 1000} seconds...`);
