@@ -199,7 +199,7 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group text-slate-400 hover:text-white transition-colors">
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-semibold text-sm">Return to Syndicates</span>
+            <span className="font-semibold text-sm hidden sm:inline">Return to Syndicates</span>
           </Link>
           <ConnectButton />
         </div>
@@ -314,7 +314,7 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
                         </div>
                         <button 
                           onClick={() => openVerifier(log)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-2.5 py-1 bg-[#1E293B] hover:bg-[#00F2FE]/10 border border-[#1E293B] hover:border-[#00F2FE]/30 rounded text-xs font-semibold text-[#00F2FE]"
+                          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1.5 px-2.5 py-1 bg-[#1E293B] hover:bg-[#00F2FE]/10 border border-[#1E293B] hover:border-[#00F2FE]/30 rounded text-xs font-semibold text-[#00F2FE]"
                         >
                           <Database className="w-3.5 h-3.5" /> Verify Blob
                         </button>
@@ -520,7 +520,7 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
                 <button onClick={() => setSelectedLog(null)} className="text-slate-500 hover:text-white transition-colors">✕</button>
               </div>
 
-              <div className="p-8">
+              <div className="p-5 sm:p-8">
                 {verifying ? (
                   <div className="flex flex-col items-center justify-center py-16 gap-6">
                     <div className="relative">

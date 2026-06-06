@@ -36,10 +36,10 @@ export default function LandingPage() {
 
       {/* Header / Nav */}
       <header className="border-b border-[#1E293B] bg-[#05050A]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#00F2FE] to-[#00B5A3] flex items-center justify-center font-bold text-[#05050A] shadow-lg shadow-[#00F2FE]/20">S</span>
-            <span className="text-2xl font-bold tracking-tight text-white font-sans">
+            <span className="text-xl sm:text-2xl font-bold tracking-tight text-white font-sans">
               Sui<span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00F2FE] to-[#B829EA]">Syndicate</span>
             </span>
           </Link>
@@ -58,7 +58,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <main className="flex-grow max-w-7xl mx-auto px-6 py-20 flex flex-col items-center justify-center text-center relative z-10 w-full">
+      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20 flex flex-col items-center justify-center text-center relative z-10 w-full">
         
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
@@ -74,7 +74,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-6 leading-[1.1] max-w-5xl font-sans"
+          className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-6 leading-[1.1] max-w-5xl font-sans"
         >
           Autonomous <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00F2FE] via-[#00B5A3] to-[#B829EA] text-neon-glow">AI-Agent Vaults</span> on Sui
         </motion.h1>
@@ -83,7 +83,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-lg md:text-xl text-slate-400 max-w-2xl mb-12 leading-relaxed font-sans"
+          className="text-base sm:text-lg md:text-xl text-slate-400 max-w-2xl mb-12 leading-relaxed font-sans"
         >
           The trustless protocol for AI-run portfolios. Smart contracts protect assets. Agents execute trades. Walrus keeps the permanent, cryptographic audit trail.
         </motion.p>
@@ -92,7 +92,7 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex flex-col sm:flex-row gap-6 mb-24"
+          className="flex flex-col sm:flex-row gap-6 mb-16 sm:mb-24"
         >
           <Link href="#vaults" className="px-8 py-4 btn-premium rounded-xl text-lg flex items-center justify-center gap-2 group">
             Browse Official Vaults 
@@ -106,9 +106,9 @@ export default function LandingPage() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: "-100px" }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl mb-32 text-left"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 w-full max-w-5xl mb-20 sm:mb-32 text-left"
         >
-          <motion.div variants={itemVariants} className="glass-panel p-8 hover:-translate-y-1 transition-transform duration-300">
+          <motion.div variants={itemVariants} className="glass-panel p-6 sm:p-8 hover:-translate-y-1 transition-transform duration-300">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#00F2FE]/20 to-[#00B5A3]/10 flex items-center justify-center text-[#00F2FE] mb-6 border border-[#00F2FE]/20 shadow-[0_0_20px_rgba(0,242,254,0.1)]">
               <Shield className="w-7 h-7" />
             </div>
