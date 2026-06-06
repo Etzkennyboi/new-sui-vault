@@ -1,6 +1,7 @@
 {
   "name": "suisyndicate-sdk",
   "version": "1.0.0",
+  "type": "module",
   "description": "TypeScript SDK for SuiSyndicate Vault Protocol",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,7 +10,7 @@
     "test": "ts-node tests/index.ts"
   },
   "dependencies": {
-    "@mysten/sui.js": "^0.51.2",
+    "@mysten/sui": "^2.17.0",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {

@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "exclude": ["frontend", "node_modules", "bin", "contracts/build"]
+  "exclude": ["frontend", "node_modules", "bin", "contracts/build", "sdk"]
 }

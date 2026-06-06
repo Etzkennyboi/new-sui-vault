@@ -1,4 +1,4 @@
-import { SuiClient } from '@mysten/sui/client';
+import { SuiJsonRpcClient as SuiClient } from '@mysten/sui/jsonRpc';
 
 export interface TatumClientConfig {
   apiKey: string;
@@ -8,6 +8,7 @@ export interface TatumClientConfig {
 export function createTatumClient(config: TatumClientConfig): SuiClient {
   const urlWithKey = `${config.rpcUrl.replace(/\/$/, '')}?apiKey=${config.apiKey}`;
   return new SuiClient({
-    url: urlWithKey
+    url: urlWithKey,
+    network: 'mainnet'
   });
 }

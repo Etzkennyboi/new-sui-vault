@@ -1,10 +1,10 @@
-import { SuiClient, SuiEvent } from '@mysten/sui/client';
+import { SuiJsonRpcClient as SuiClient, SuiEvent } from '@mysten/sui/jsonRpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { bcs } from '@mysten/sui/bcs';
 import { MIN_SQRT_PRICE, MAX_SQRT_PRICE } from '@cetusprotocol/cetus-sui-clmm-sdk';
-import { WalrusClient } from './walrus';
+import { WalrusClient } from './walrus.js';
 
 export interface SDKConfig {
   packageId: string;

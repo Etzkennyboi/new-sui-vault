@@ -1,3 +1,3 @@
-export * from './client';
-export * from './walrus';
-export * from './tatum';
+export * from './client.js';
+export * from './walrus.js';
+export * from './tatum.js';
