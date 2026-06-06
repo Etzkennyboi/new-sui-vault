@@ -9,7 +9,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { WalrusClient } from '../../../../sdk/src/walrus';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID || '0x4f177e91a1848e3997eae67a7b8e1f0c2a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d';
+const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID || '0x8509610948b6437c3a9dd841af6f1083a3481adaa521625d18c90d08e05b10e9';
 const WALRUS_PUBLISHER = 'https://publisher.walrus-testnet.walrus.space';
 const WALRUS_AGGREGATOR = 'https://aggregator.walrus-testnet.walrus.space';
 
