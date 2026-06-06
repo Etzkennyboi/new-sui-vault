@@ -1,0 +1,20 @@
+{
+  "name": "suisyndicate-sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for SuiSyndicate Vault Protocol",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "ts-node tests/index.ts"
+  },
+  "dependencies": {
+    "@mysten/sui.js": "^0.51.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

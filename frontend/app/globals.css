@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-outfit), "Inter", sans-serif;
+  --font-mono: var(--font-space), "Courier New", monospace;
+  
+  --color-background: #05050A;
+  --color-surface: #0A0F1C;
+  --color-surface-light: #111B2D;
+  --color-border: #1E293B;
+  
+  --color-primary: #00F2FE;
+  --color-secondary: #00B5A3;
+  --color-accent: #B829EA;
+}
+
+:root {
+  --background: #05050A;
+  --foreground: #F1F5F9;
+  --neon-cyan: #00F2FE;
+  --neon-teal: #00B5A3;
+  --neon-purple: #B829EA;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(0, 242, 254, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 90% 80%, rgba(184, 41, 234, 0.08) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism 2.0 Panels */
+.glass-panel {
+  background: linear-gradient(135deg, rgba(17, 27, 45, 0.8), rgba(10, 15, 28, 0.95));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 15px 50px -10px rgba(0, 0, 0, 0.6);
+}
+
+.glass-panel-glow {
+  background: linear-gradient(135deg, rgba(17, 27, 45, 0.85), rgba(10, 15, 28, 0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 0 30px 0 rgba(0, 242, 254, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel-glow:hover {
+  border-color: rgba(0, 242, 254, 0.4);
+  box-shadow: 0 0 40px 5px rgba(0, 242, 254, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Cyberpunk Neon Glows */
+.text-neon-glow {
+  text-shadow: 0 0 10px rgba(0, 242, 254, 0.6), 0 0 20px rgba(0, 181, 163, 0.4);
+}
+
+/* Timelines and Ornaments */
+.timeline-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 15px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--neon-cyan), var(--neon-purple));
+  opacity: 0.3;
+}
+
+/* Gradients for text and buttons */
+.gradient-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(90deg, #00F2FE, #00B5A3);
+}
+
+.btn-premium {
+  background: linear-gradient(90deg, var(--neon-cyan), var(--neon-teal));
+  color: #05050A;
+  font-weight: 700;
+  border: none;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, var(--neon-teal), var(--neon-cyan));
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+
+.btn-premium:hover::before {
+  opacity: 1;
+}
+
+.btn-premium:hover {
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+  transform: translateY(-1px);
+}
