@@ -303,14 +303,14 @@ async function runAgent() {
       );
       console.log(`ActionLog anchored to Sui in epoch ${currentEpoch}. Walrus Blob ID: ${logBlobId}`);
 
-      const sleepMs = strategy.interval_ms || 60000;
-      console.log(`Sleeping for ${sleepMs / 1000} seconds...`);
+      const sleepMs = strategy.interval_ms || 15000;
+      console.log(`Sleeping for ${sleepMs / 1000} seconds...\n`);
       await new Promise((resolve) => setTimeout(resolve, sleepMs));
 
     } catch (err: any) {
       console.error('Error in agent loop tick:', err.message || err);
-      console.log('Sleeping for 30 seconds before retry...');
-      await new Promise((resolve) => setTimeout(resolve, 30000));
+      console.log('Sleeping for 15 seconds...\n');
+      await new Promise(r => setTimeout(r, 15000));
     }
   }
 }

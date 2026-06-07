@@ -117,7 +117,7 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
       if (raw.data?.content && 'fields' in raw.data.content) {
         const fields = raw.data.content.fields as any;
         setVaultSuiBal(parseInt(fields.sui_balance || '0'));
-        setVaultUsdcBal(parseInt(fields.usdc_balance || '0'));
+        setVaultUsdcBal(parseInt(fields.target_balance || '0'));
         setVaultTotalShares(parseInt(fields.total_shares || '0'));
       }
     } catch (err: any) {
