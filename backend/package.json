@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "Root workspace and script runners for SuiSyndicate",
   "scripts": {
-    "bootstrap": "ts-node scripts/bootstrap.ts",
-    "agent": "ts-node agent/agent-loop.ts",
-    "test:connections": "ts-node scripts/test-connections.ts",
-    "list-models": "ts-node scripts/list-models.ts",
-    "test:flow": "ts-node scripts/test-vault-flow.ts",
-    "test:scenarios": "ts-node scripts/test-agent-scenarios.ts"
+    "bootstrap": "tsx scripts/bootstrap.ts",
+    "agent": "tsx agent/agent-loop.ts",
+    "test:connections": "tsx scripts/test-connections.ts",
+    "list-models": "tsx scripts/list-models.ts",
+    "test:flow": "tsx scripts/test-vault-flow.ts",
+    "test:scenarios": "tsx scripts/test-agent-scenarios.ts"
   },
   "dependencies": {
     "@cetusprotocol/cetus-sui-clmm-sdk": "^5.4.0",
@@ -19,6 +19,7 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.7.1",
     "typescript": "^5.3.3"
   }
 }

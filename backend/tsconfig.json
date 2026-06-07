@@ -1,12 +1,30 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "exclude": ["frontend", "node_modules"]
+  "exclude": [
+    "frontend",
+    "node_modules",
+    "scripts/check-shares.ts",
+    "scripts/test-deposit.ts",
+    "scripts/get-all-bals.ts",
+    "scripts/transfer-usdc.ts",
+    "scripts/test-backend.ts",
+    "scripts/test-vault-flow.ts",
+    "scripts/e2e-test.ts",
+    "scripts/recover.ts",
+    "scripts/recover-agent.ts",
+    "scripts/agent-cetus-swap.ts",
+    "scripts/agent-ragequit.ts",
+    "scripts/check-depositors.ts",
+    "scripts/check-user-shares.ts",
+    "scripts/get-depositors.ts",
+    "scripts/get-user-address.ts"
+  ]
 }

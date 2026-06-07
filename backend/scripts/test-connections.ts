@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { WalrusClient } from '../sdk/src/walrus';
-import { createTatumClient } from '../sdk/src/tatum';
+import { WalrusClient } from '../../sdk/src/walrus';
+import { createTatumClient } from '../../sdk/src/tatum';
 
 // Load environment variables
 dotenv.config({ path: path.resolve(__dirname, '../.env') });

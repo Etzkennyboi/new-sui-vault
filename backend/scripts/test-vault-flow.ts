@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { SuiSyndicateClient } from '../sdk/src/client';
-import { WalrusClient } from '../sdk/src/walrus';
+import { SuiSyndicateClient } from '../../sdk/src/client';
+import { WalrusClient } from '../../sdk/src/walrus';
 
 // Load environment config
 dotenv.config({ path: path.resolve(__dirname, '../.env') });

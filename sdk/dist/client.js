@@ -2,7 +2,9 @@ import { Transaction } from '@mysten/sui/transactions';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { bcs } from '@mysten/sui/bcs';
-import { MIN_SQRT_PRICE, MAX_SQRT_PRICE } from '@cetusprotocol/cetus-sui-clmm-sdk';
+// Remove incompatible Cetus SDK import and hardcode the tick boundaries
+const MIN_SQRT_PRICE = "4295048016";
+const MAX_SQRT_PRICE = "79226673515401279992447579055";
 export class SuiSyndicateClient {
     suiClient;
     walrusClient;

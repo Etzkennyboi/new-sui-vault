@@ -71,15 +71,46 @@ Strategy: Target Allocation Rebalancing
 
 Rule: If one asset dominates by more than ${strategy.parameters.ai_rebalance_trigger_threshold_pct || 2}% over its target allocation, trigger should_rebalance = true and compute the exact amount_mist swap required to restore the target percentages.`;
   } else if (strategy.strategy_type === 'grid_harvesting') {
-    const lastPrice = lastLog?.prices?.SUI_USDC || 'None (First trade)';
+    const lastPrice = lastLog?.prices?.SUI_USDC || strategy.parameters.last_trade_price || 2.0;
+    const priceChange = liveExchangeRate - lastPrice;
+    const direction = priceChange > 0 ? "ROSE (UP)" : priceChange < 0 ? "FELL (DOWN)" : "NO CHANGE";
+    const percentChange = Math.abs(priceChange) / lastPrice * 100;
+
     userPrompt += `
 Strategy: Grid Volatility Harvesting
 - Grid Upper Bound: $${strategy.parameters.grid_upper_bound}
 - Grid Lower Bound: $${strategy.parameters.grid_lower_bound}
 - Number of Grid Steps: ${strategy.parameters.grid_steps}
-- Last Trade Execution Price: $${lastPrice}
+- Last Trade Price: $${lastPrice}
+- Current SUI Price has ${direction} relative to Last Trade Price by ${percentChange.toFixed(2)}%.
 
-Rule: If the current price has moved significantly away from the last execution price, and sits within the grid range, execute a partial swap. Sell a portion of SUI (swap_sui_to_usdc) if the price rose into a higher grid tier. Buy a portion of SUI (swap_usdc_to_sui) if the price fell into a lower tier.`;
+Rule: Since the price has ${direction}, you must execute:
+- If SUI price FELL (DOWN), swap USDC to SUI (action: swap_usdc_to_sui) to buy the dip.
+- If SUI price ROSE (UP), swap SUI to USDC (action: swap_sui_to_usdc) to take profits.`;
+  } else if (strategy.strategy_type === 'momentum_trend') {
+    const historicalPrice = strategy.parameters.historical_price || liveExchangeRate;
+    const priceReturn = (liveExchangeRate - historicalPrice) / historicalPrice * 100;
+    const direction = priceReturn > 0 ? "BULLISH (UPTREND)" : priceReturn < 0 ? "BEARISH (DOWNTREND)" : "NEUTRAL";
+    const threshold = strategy.parameters.momentum_threshold_pct;
+    
+    let targetSuiPct = 50;
+    if (priceReturn > threshold) {
+      targetSuiPct = strategy.parameters.sui_allocation_uptrend_pct;
+    } else if (priceReturn < -threshold) {
+      targetSuiPct = strategy.parameters.sui_allocation_downtrend_pct;
+    }
+
+    userPrompt += `
+Strategy: Momentum Trend Follower
+- Momentum Period: ${strategy.parameters.momentum_period_hours} hours
+- Momentum Threshold: ${threshold}%
+- Uptrend SUI Allocation: ${strategy.parameters.sui_allocation_uptrend_pct}%
+- Downtrend SUI Allocation: ${strategy.parameters.sui_allocation_downtrend_pct}%
+- Historical Price: $${historicalPrice}
+- Current SUI Return over period is ${priceReturn.toFixed(2)}% which indicates a ${direction}.
+- The target SUI allocation based on this trend is ${targetSuiPct}%.
+
+Rule: Compare current SUI allocation with target SUI allocation (${targetSuiPct}%) and execute swap to align them.`;
   } else {
     userPrompt += `\nUnknown strategy type. Do not trade.`;
   }
@@ -124,9 +155,9 @@ Rule: If the current price has moved significantly away from the last execution 
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(text);
   } catch (err: any) {
-    console.error(`Failed to communicate with DeepSeek: ${err.message}`);
+    console.error(`Failed to communicate with DeepSeek: ${err.message}. Triggering local fallback...`);
     
-    // Intelligent Fallback: Calculate rebalance locally if AI API is down
+    // 1. Fallback for Target Allocation
     if (strategy.strategy_type === 'target_allocation') {
       const suiValueUsdc = (vaultState.suiBalance / 1e9) * liveExchangeRate * 1e6;
       const usdcValue = vaultState.usdcBalance;
@@ -144,7 +175,7 @@ Rule: If the current price has moved significantly away from the last execution 
             should_rebalance: true,
             action: 'swap_sui_to_usdc',
             amount_mist: Math.floor(suiToSell),
-            reasoning: 'Local deterministic fallback: NVIDIA API timed out. Swapping excess SUI to restore target allocation.'
+            reasoning: 'Local deterministic fallback: NVIDIA API offline. Swapping excess SUI to restore target allocation.'
           };
         } else {
           const usdcToSell = targetSuiValueUsdc - suiValueUsdc;
@@ -152,13 +183,94 @@ Rule: If the current price has moved significantly away from the last execution 
             should_rebalance: true,
             action: 'swap_usdc_to_sui',
             amount_mist: Math.floor(usdcToSell),
-            reasoning: 'Local deterministic fallback: NVIDIA API timed out. Swapping excess USDC to restore target allocation.'
+            reasoning: 'Local deterministic fallback: NVIDIA API offline. Swapping excess USDC to restore target allocation.'
+          };
+        }
+      }
+    }
+
+    // 2. Fallback for Grid Harvesting
+    if (strategy.strategy_type === 'grid_harvesting') {
+      const upper = strategy.parameters.grid_upper_bound;
+      const lower = strategy.parameters.grid_lower_bound;
+      const steps = strategy.parameters.grid_steps;
+      const lastPrice = lastLog?.prices?.SUI_USDC || strategy.parameters.last_trade_price || 2.0;
+      const stepSize = (upper - lower) / steps;
+      
+      const priceDiff = liveExchangeRate - lastPrice;
+      const stepsMoved = Math.floor(Math.abs(priceDiff) / stepSize);
+      
+      if (stepsMoved >= 1) {
+        const pctToSwap = Math.min(0.2 * stepsMoved, 0.8);
+        if (priceDiff > 0) {
+          const amountMist = Math.floor(vaultState.suiBalance * pctToSwap);
+          if (amountMist > 0.001 * 1e9) {
+            return {
+              should_rebalance: true,
+              action: 'swap_sui_to_usdc',
+              amount_mist: amountMist,
+              reasoning: `Local fallback: Price rose by ${stepsMoved} step(s) above last execution. Selling SUI.`
+            };
+          }
+        } else {
+          const amountMist = Math.floor(vaultState.usdcBalance * pctToSwap);
+          if (amountMist > 0.01 * 1e6) {
+            return {
+              should_rebalance: true,
+              action: 'swap_usdc_to_sui',
+              amount_mist: amountMist,
+              reasoning: `Local fallback: Price fell by ${stepsMoved} step(s) below last execution. Buying SUI.`
+            };
+          }
+        }
+      }
+    }
+
+    // 3. Fallback for Momentum Trend Follower
+    if (strategy.strategy_type === 'momentum_trend') {
+      const historicalPrice = strategy.parameters.historical_price || liveExchangeRate;
+      const threshold = strategy.parameters.momentum_threshold_pct / 100;
+      const uptrendSuiPct = strategy.parameters.sui_allocation_uptrend_pct;
+      const downtrendSuiPct = strategy.parameters.sui_allocation_downtrend_pct;
+      
+      const priceReturn = (liveExchangeRate - historicalPrice) / historicalPrice;
+      let targetSuiPct = 50;
+      
+      if (priceReturn > threshold) {
+        targetSuiPct = uptrendSuiPct;
+      } else if (priceReturn < -threshold) {
+        targetSuiPct = downtrendSuiPct;
+      }
+      
+      const suiValueUsdc = (vaultState.suiBalance / 1e9) * liveExchangeRate * 1e6;
+      const usdcValue = vaultState.usdcBalance;
+      const totalValueUsdc = suiValueUsdc + usdcValue;
+      const targetSuiValueUsdc = totalValueUsdc * (targetSuiPct / 100);
+      const currentSuiPct = totalValueUsdc > 0 ? (suiValueUsdc / totalValueUsdc) * 100 : 0;
+      
+      if (Math.abs(currentSuiPct - targetSuiPct) > 2) {
+        if (suiValueUsdc > targetSuiValueUsdc) {
+          const usdcToBuy = suiValueUsdc - targetSuiValueUsdc;
+          const suiToSell = (usdcToBuy / 1e6) / liveExchangeRate * 1e9;
+          return {
+            should_rebalance: true,
+            action: 'swap_sui_to_usdc',
+            amount_mist: Math.floor(suiToSell),
+            reasoning: `Local fallback: Trend return is ${(priceReturn * 100).toFixed(2)}%. Aligning SUI to target ${targetSuiPct}%.`
+          };
+        } else {
+          const usdcToSell = targetSuiValueUsdc - suiValueUsdc;
+          return {
+            should_rebalance: true,
+            action: 'swap_usdc_to_sui',
+            amount_mist: Math.floor(usdcToSell),
+            reasoning: `Local fallback: Trend return is ${(priceReturn * 100).toFixed(2)}%. Aligning SUI to target ${targetSuiPct}%.`
           };
         }
       }
     }
     
-    return { should_rebalance: false, action: 'none', amount_mist: 0, reasoning: 'DeepSeek rate-limited/failed. No action taken.' };
+    return { should_rebalance: false, action: 'none', amount_mist: 0, reasoning: 'Fallback inactive or limits not reached. No trade.' };
   }
 }
 
@@ -208,11 +320,49 @@ async function runAgent() {
       const liveExchangeRate = await fetchPythSuiPrice();
       console.log(`Pyth Oracle Price: $${liveExchangeRate.toFixed(4)}`);
 
+      if (vaultState.suiBalance === 0 && vaultState.usdcBalance === 0) {
+        console.log('Vault is empty (0 SUI, 0 USDC). Skipping rebalance monitoring tick.');
+        const sleepMs = strategy.interval_ms || 15000;
+        await new Promise((resolve) => setTimeout(resolve, sleepMs));
+        continue;
+      }
+
       console.log('Fetching last Action Log from Walrus...');
       const logs = await sdk.getVaultLogs(VAULT_ID);
       const lastLog = logs.length > 0 ? logs[0] : null;
 
-      // Simple heuristic gate to save DeepSeek credits for Target Allocation
+      // 1. Resolve historical price for momentum trend strategy
+      if (strategy.strategy_type === 'momentum_trend') {
+        const periodMs = (strategy.parameters.momentum_period_hours || 24) * 3600 * 1000;
+        const targetTime = Date.now() - periodMs;
+        
+        let closestLog = null;
+        let minDiff = Infinity;
+        for (const log of logs) {
+          const diff = Math.abs(log.timestamp - targetTime);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestLog = log;
+          }
+        }
+        
+        if (closestLog && minDiff < 4 * 3600 * 1000) {
+          strategy.parameters.historical_price = closestLog.prices?.SUI_USDC || liveExchangeRate;
+          console.log(`Resolved historical price from logs at ${new Date(closestLog.timestamp).toISOString()}: $${strategy.parameters.historical_price}`);
+        } else {
+          console.log(`No historical log found near ${new Date(targetTime).toISOString()}. Using default parameter: $${strategy.parameters.historical_price || liveExchangeRate}`);
+          strategy.parameters.historical_price = strategy.parameters.historical_price || liveExchangeRate;
+        }
+      }
+
+      // 2. Resolve last execution price for grid harvesting strategy
+      if (strategy.strategy_type === 'grid_harvesting') {
+        const lastPrice = lastLog?.prices?.SUI_USDC || strategy.parameters.last_trade_price || 2.0;
+        strategy.parameters.last_trade_price = lastPrice;
+        console.log(`Resolved last trade price for grid: $${lastPrice}`);
+      }
+
+      // 3. Heuristic Gates to save DeepSeek credits
       if (strategy.strategy_type === 'target_allocation') {
         const suiValueUsdc = (vaultState.suiBalance / 1e9) * liveExchangeRate;
         const usdcValue = (vaultState.usdcBalance / 1e6);
@@ -231,6 +381,29 @@ async function runAgent() {
           }
           console.log(`Deviation is ${suiDeviation.toFixed(2)}%. Waking up DeepSeek AI...`);
         }
+      } else if (strategy.strategy_type === 'grid_harvesting') {
+        const upper = strategy.parameters.grid_upper_bound;
+        const lower = strategy.parameters.grid_lower_bound;
+        const steps = strategy.parameters.grid_steps;
+        const lastPrice = strategy.parameters.last_trade_price;
+        const stepSize = (upper - lower) / steps;
+        
+        const priceDiff = Math.abs(liveExchangeRate - lastPrice);
+        if (priceDiff < stepSize) {
+          console.log(`Price change ($${priceDiff.toFixed(4)}) is less than grid step size ($${stepSize.toFixed(4)}) relative to last trade price $${lastPrice.toFixed(4)}. Skipping DeepSeek.`);
+          await new Promise((r) => setTimeout(r, strategy.interval_ms || 60000));
+          continue;
+        }
+        console.log(`Price has crossed a grid tier ($${priceDiff.toFixed(4)} > $${stepSize.toFixed(4)}). Waking up DeepSeek AI...`);
+      } else if (strategy.strategy_type === 'momentum_trend') {
+        const lastPrice = lastLog?.prices?.SUI_USDC || liveExchangeRate;
+        const priceDeviation = Math.abs(liveExchangeRate - lastPrice) / lastPrice * 100;
+        if (priceDeviation < 1.0) {
+          console.log(`Price deviation is only ${priceDeviation.toFixed(2)}% from last logged price. Below 1% threshold. Skipping DeepSeek.`);
+          await new Promise((r) => setTimeout(r, strategy.interval_ms || 60000));
+          continue;
+        }
+        console.log(`Price deviation is ${priceDeviation.toFixed(2)}% from last logged price. Waking up DeepSeek AI...`);
       }
 
       const decision = await queryDeepSeek(strategy, vaultState, liveExchangeRate, lastLog);
@@ -240,7 +413,7 @@ async function runAgent() {
 
       let txDigest: string | null = null;
 
-      if (decision.should_rebalance && decision.action !== 'none') {
+      if (decision.should_rebalance && decision.action !== 'none' && decision.amount_mist > 0) {
         let expectedOut = 0;
         const slippageTolerance = 0.02; // 2% Max Slippage
 

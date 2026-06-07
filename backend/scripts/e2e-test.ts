@@ -1,8 +1,8 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as readline from 'readline';
-import { SuiSyndicateClient } from '../sdk/src/client';
-import { WalrusClient } from '../sdk/src/walrus';
+import { SuiSyndicateClient } from '../../sdk/src/client';
+import { WalrusClient } from '../../sdk/src/walrus';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
