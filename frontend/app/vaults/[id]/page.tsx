@@ -569,7 +569,26 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
                     </div>
 
                     <div className="bg-[#B829EA]/10 border border-[#B829EA]/20 rounded-xl p-4 mb-8">
-                      <p className="text-xs text-[#B829EA] leading-relaxed">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-sm font-semibold text-white">Estimated Withdrawal</span>
+                      </div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-slate-400">SUI</span>
+                        <span className="text-white font-mono font-bold">{
+                          ownedShares.find(s => s.id === shareObjectId) && vaultTotalShares && vaultSuiBal !== null
+                            ? ((vaultSuiBal / vaultTotalShares) * Number(ownedShares.find(s => s.id === shareObjectId)?.shares) / 1e9).toFixed(2)
+                            : '0.00'
+                        } SUI</span>
+                      </div>
+                      <div className="flex justify-between text-sm mb-4">
+                        <span className="text-slate-400">USDC</span>
+                        <span className="text-white font-mono font-bold">{
+                          ownedShares.find(s => s.id === shareObjectId) && vaultTotalShares && vaultUsdcBal !== null
+                            ? ((vaultUsdcBal / vaultTotalShares) * Number(ownedShares.find(s => s.id === shareObjectId)?.shares) / 1e6).toFixed(2)
+                            : '0.00'
+                        } USDC</span>
+                      </div>
+                      <p className="text-[11px] text-[#B829EA] leading-relaxed border-t border-[#B829EA]/20 pt-3">
                         <strong>Ragequit Execution:</strong> This action instantly burns your share and returns your exact proportional ownership of the underlying SUI and USDC directly to your wallet.
                       </p>
                     </div>
