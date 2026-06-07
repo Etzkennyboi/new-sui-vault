@@ -185,15 +185,7 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
 
       txb.transferObjects([shareObj], txb.pure.address(currentAccount.address));
 
-      const result = await signAndExecuteTransaction({ 
-        transaction: txb as any,
-        options: { showEffects: true }
-      });
-      
-      if (result.effects?.status?.status === 'failure') {
-        throw new Error(`Transaction failed on-chain: ${result.effects.status.error}`);
-      }
-      
+      await signAndExecuteTransaction({ transaction: txb as any });
       alert('Deposit successful!');
       
       // Instantly trigger AI rebalance API
@@ -233,15 +225,7 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
 
       txb.transferObjects([suiCoin, usdcCoin], txb.pure.address(currentAccount.address));
 
-      const result = await signAndExecuteTransaction({ 
-        transaction: txb as any,
-        options: { showEffects: true }
-      });
-      
-      if (result.effects?.status?.status === 'failure') {
-        throw new Error(`Transaction failed on-chain: ${result.effects.status.error}`);
-      }
-      
+      await signAndExecuteTransaction({ transaction: txb as any });
       alert('Ragequit completed!');
       fetchUserShares();
       fetchVaultState();
