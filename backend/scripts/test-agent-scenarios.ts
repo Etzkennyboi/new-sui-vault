@@ -119,7 +119,10 @@ async function runScenarios() {
   walrusClient.storeBlob = async () => 'mock_blob_id_for_testing_' + Date.now();
 
   const sdk = new SuiSyndicateClient(suiClient as any, walrusClient, {
-    packageId: PACKAGE_ID, factoryId: FACTORY_ID, targetCoinType: TARGET_COIN_TYPE,
+    packageId: PACKAGE_ID,
+    factoryId: FACTORY_ID,
+    coinTypeA: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::ssui::SSUI',
+    coinTypeB: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::susdc::SUSDC',
   });
 
   const signer = SuiSyndicateClient.getKeypairFromPrivateKey(PRIVATE_KEY);

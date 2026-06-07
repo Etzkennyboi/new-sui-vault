@@ -1,7 +1,6 @@
 module suisyndicate::vault {
     use sui::balance::{Self, Balance};
     use sui::coin::{Self, Coin};
-    use sui::sui::SUI;
     use sui::table::{Self, Table};
     use sui::event;
     use std::string::String;
@@ -16,12 +15,12 @@ module suisyndicate::vault {
 
     // ==================== OBJECTS ====================
 
-    public struct Vault<phantom T> has key {
+    public struct Vault<phantom A, phantom B> has key {
         id: UID,
         creator: address,
         name: String,
-        sui_balance: Balance<SUI>,
-        target_balance: Balance<T>,
+        balance_a: Balance<A>,
+        balance_b: Balance<B>,
         total_shares: u64,
         walrus_strategy_blob: vector<u8>,
         walrus_metadata_blob: vector<u8>,
@@ -53,7 +52,7 @@ module suisyndicate::vault {
         vault_id: ID,
         lp: address,
         amount: u64,
-        is_sui: bool,
+        is_asset_a: bool,
         shares_minted: u64
     }
 
@@ -61,8 +60,8 @@ module suisyndicate::vault {
         vault_id: ID,
         lp: address,
         shares_burned: u64,
-        sui_returned: u64,
-        target_returned: u64
+        amount_a_returned: u64,
+        amount_b_returned: u64
     }
 
     public struct LogAnchored has copy, drop {
@@ -80,22 +79,22 @@ module suisyndicate::vault {
 
     // ==================== CONSTRUCTOR (PACKAGE ONLY) ====================
 
-    public(package) fun create_vault<T>(
+    public(package) fun create_vault<A, B>(
         name: String,
         strategy_blob: vector<u8>,
         metadata_blob: vector<u8>,
         ctx: &mut TxContext
-    ): (Vault<T>, CreatorCap) {
+    ): (Vault<A, B>, CreatorCap) {
         let vault_uid = object::new(ctx);
         let vault_id = object::uid_to_inner(&vault_uid);
         let creator = tx_context::sender(ctx);
 
-        let vault = Vault<T> {
+        let vault = Vault<A, B> {
             id: vault_uid,
             creator,
             name,
-            sui_balance: balance::zero(),
-            target_balance: balance::zero(),
+            balance_a: balance::zero(),
+            balance_b: balance::zero(),
             total_shares: 0,
             walrus_strategy_blob: strategy_blob,
             walrus_metadata_blob: metadata_blob,
@@ -118,19 +117,19 @@ module suisyndicate::vault {
         (vault, creator_cap)
     }
 
-    public(package) fun share_vault<T>(vault: Vault<T>) {
+    public(package) fun share_vault<A, B>(vault: Vault<A, B>) {
         transfer::share_object(vault)
     }
 
     // ==================== PUBLIC ENTRY FUNCTIONS ====================
 
-    public fun deposit_sui<T>(
-        vault: &mut Vault<T>,
-        sui_coin: Coin<SUI>,
+    public fun deposit_a<A, B>(
+        vault: &mut Vault<A, B>,
+        coin_a: Coin<A>,
         ctx: &mut TxContext
     ): SyndicateShare {
         assert!(!vault.paused, EPaused);
-        let amount = coin::value(&sui_coin);
+        let amount = coin::value(&coin_a);
         assert!(amount > 0, EZeroAmount);
 
         let vault_id = object::id(vault);
@@ -139,22 +138,22 @@ module suisyndicate::vault {
         let shares_to_mint = if (vault.total_shares == 0) {
             amount
         } else {
-            let vault_sui_val = balance::value(&vault.sui_balance);
-            if (vault_sui_val == 0) { amount } else {
-                ((amount as u128) * (vault.total_shares as u128) / (vault_sui_val as u128) as u64)
+            let vault_a_val = balance::value(&vault.balance_a);
+            if (vault_a_val == 0) { amount } else {
+                ((amount as u128) * (vault.total_shares as u128) / (vault_a_val as u128) as u64)
             }
         };
 
         assert!(shares_to_mint > 0, EZeroShares);
 
-        balance::join(&mut vault.sui_balance, coin::into_balance(sui_coin));
+        balance::join(&mut vault.balance_a, coin::into_balance(coin_a));
         vault.total_shares = vault.total_shares + shares_to_mint;
 
         event::emit(Deposited {
             vault_id,
             lp: lp_address,
             amount,
-            is_sui: true,
+            is_asset_a: true,
             shares_minted: shares_to_mint
         });
 
@@ -165,13 +164,13 @@ module suisyndicate::vault {
         }
     }
 
-    public fun deposit_target<T>(
-        vault: &mut Vault<T>,
-        target_coin: Coin<T>,
+    public fun deposit_b<A, B>(
+        vault: &mut Vault<A, B>,
+        coin_b: Coin<B>,
         ctx: &mut TxContext
     ): SyndicateShare {
         assert!(!vault.paused, EPaused);
-        let amount = coin::value(&target_coin);
+        let amount = coin::value(&coin_b);
         assert!(amount > 0, EZeroAmount);
 
         let vault_id = object::id(vault);
@@ -180,22 +179,22 @@ module suisyndicate::vault {
         let shares_to_mint = if (vault.total_shares == 0) {
             amount
         } else {
-            let vault_target_val = balance::value(&vault.target_balance);
-            if (vault_target_val == 0) { amount } else {
-                ((amount as u128) * (vault.total_shares as u128) / (vault_target_val as u128) as u64)
+            let vault_b_val = balance::value(&vault.balance_b);
+            if (vault_b_val == 0) { amount } else {
+                ((amount as u128) * (vault.total_shares as u128) / (vault_b_val as u128) as u64)
             }
         };
 
         assert!(shares_to_mint > 0, EZeroShares);
 
-        balance::join(&mut vault.target_balance, coin::into_balance(target_coin));
+        balance::join(&mut vault.balance_b, coin::into_balance(coin_b));
         vault.total_shares = vault.total_shares + shares_to_mint;
 
         event::emit(Deposited {
             vault_id,
             lp: lp_address,
             amount,
-            is_sui: false,
+            is_asset_a: false,
             shares_minted: shares_to_mint
         });
 
@@ -206,11 +205,11 @@ module suisyndicate::vault {
         }
     }
 
-    public fun ragequit<T>(
-        vault: &mut Vault<T>,
+    public fun ragequit<A, B>(
+        vault: &mut Vault<A, B>,
         share_obj: SyndicateShare,
         ctx: &mut TxContext
-    ): (Coin<SUI>, Coin<T>) {
+    ): (Coin<A>, Coin<B>) {
         let vault_id = object::id(vault);
         let SyndicateShare { id, vault_id: share_vault_id, shares } = share_obj;
         object::delete(id);
@@ -219,27 +218,27 @@ module suisyndicate::vault {
         assert!(shares > 0, EZeroShares);
 
         let total_shares = vault.total_shares;
-        let sui_amount = ((balance::value(&vault.sui_balance) as u128) * (shares as u128) / (total_shares as u128) as u64);
-        let target_amount = ((balance::value(&vault.target_balance) as u128) * (shares as u128) / (total_shares as u128) as u64);
+        let amount_a = ((balance::value(&vault.balance_a) as u128) * (shares as u128) / (total_shares as u128) as u64);
+        let amount_b = ((balance::value(&vault.balance_b) as u128) * (shares as u128) / (total_shares as u128) as u64);
 
         vault.total_shares = total_shares - shares;
 
-        let sui_payout = coin::from_balance(balance::split(&mut vault.sui_balance, sui_amount), ctx);
-        let target_payout = coin::from_balance(balance::split(&mut vault.target_balance, target_amount), ctx);
+        let payout_a = coin::from_balance(balance::split(&mut vault.balance_a, amount_a), ctx);
+        let payout_b = coin::from_balance(balance::split(&mut vault.balance_b, amount_b), ctx);
 
         event::emit(Ragequit {
             vault_id,
             lp: tx_context::sender(ctx),
             shares_burned: shares,
-            sui_returned: sui_amount,
-            target_returned: target_amount
+            amount_a_returned: amount_a,
+            amount_b_returned: amount_b
         });
 
-        (sui_payout, target_payout)
+        (payout_a, payout_b)
     }
 
-    public fun anchor_lp_agreement<T>(
-        vault: &mut Vault<T>,
+    public fun anchor_lp_agreement<A, B>(
+        vault: &mut Vault<A, B>,
         blob_id: vector<u8>,
         ctx: &mut TxContext
     ) {
@@ -256,8 +255,8 @@ module suisyndicate::vault {
         });
     }
 
-    public fun anchor_log<T>(
-        vault: &mut Vault<T>,
+    public fun anchor_log<A, B>(
+        vault: &mut Vault<A, B>,
         cap: &AgentCap,
         epoch: u64,
         blob_id: vector<u8>
@@ -280,9 +279,9 @@ module suisyndicate::vault {
 
     // ==================== CREATOR ADMIN FUNCTIONS ====================
 
-    public fun issue_agent_cap<T>(
+    public fun issue_agent_cap<A, B>(
         _creator_cap: &CreatorCap,
-        vault: &Vault<T>,
+        vault: &Vault<A, B>,
         agent: address,
         spend_limit_per_tx: u64,
         spend_limit_daily: u64,
@@ -298,9 +297,9 @@ module suisyndicate::vault {
         )
     }
 
-    public fun update_agent_limits<T>(
+    public fun update_agent_limits<A, B>(
         _creator_cap: &CreatorCap,
-        vault: &Vault<T>,
+        vault: &Vault<A, B>,
         cap: &mut AgentCap,
         spend_limit_per_tx: u64,
         spend_limit_daily: u64
@@ -310,9 +309,9 @@ module suisyndicate::vault {
         agent_cap::set_limits(cap, spend_limit_per_tx, spend_limit_daily);
     }
 
-    public fun revoke_agent_cap<T>(
+    public fun revoke_agent_cap<A, B>(
         _creator_cap: &CreatorCap,
-        vault: &Vault<T>,
+        vault: &Vault<A, B>,
         cap: &mut AgentCap
     ) {
         assert!(_creator_cap.vault_id == object::id(vault), EVaultIdMismatch);
@@ -320,17 +319,17 @@ module suisyndicate::vault {
         agent_cap::set_revoked(cap, true);
     }
 
-    public fun pause<T>(
+    public fun pause<A, B>(
         _creator_cap: &CreatorCap,
-        vault: &mut Vault<T>
+        vault: &mut Vault<A, B>
     ) {
         assert!(_creator_cap.vault_id == object::id(vault), EVaultIdMismatch);
         vault.paused = true;
     }
 
-    public fun unpause<T>(
+    public fun unpause<A, B>(
         _creator_cap: &CreatorCap,
-        vault: &mut Vault<T>
+        vault: &mut Vault<A, B>
     ) {
         assert!(_creator_cap.vault_id == object::id(vault), EVaultIdMismatch);
         vault.paused = false;
@@ -338,55 +337,55 @@ module suisyndicate::vault {
 
     // ==================== INTERNAL/PACKAGE EXECUTION INTERFACES ====================
 
-    public(package) fun borrow_sui<T>(
-        vault: &mut Vault<T>,
+    public(package) fun borrow_a<A, B>(
+        vault: &mut Vault<A, B>,
         cap: &mut AgentCap,
         amount: u64,
         ctx: &mut TxContext
-    ): Coin<SUI> {
+    ): Coin<A> {
         assert!(!vault.paused, EPaused);
-        assert!(balance::value(&vault.sui_balance) >= amount, EInsufficientBalance);
+        assert!(balance::value(&vault.balance_a) >= amount, EInsufficientBalance);
 
         agent_cap::verify_and_update_limits(cap, object::id(vault), amount, ctx);
 
-        coin::from_balance(balance::split(&mut vault.sui_balance, amount), ctx)
+        coin::from_balance(balance::split(&mut vault.balance_a, amount), ctx)
     }
 
-    public(package) fun borrow_target<T>(
-        vault: &mut Vault<T>,
+    public(package) fun borrow_b<A, B>(
+        vault: &mut Vault<A, B>,
         cap: &mut AgentCap,
         amount: u64,
         ctx: &mut TxContext
-    ): Coin<T> {
+    ): Coin<B> {
         assert!(!vault.paused, EPaused);
-        assert!(balance::value(&vault.target_balance) >= amount, EInsufficientBalance);
+        assert!(balance::value(&vault.balance_b) >= amount, EInsufficientBalance);
 
         agent_cap::verify_and_update_limits(cap, object::id(vault), amount, ctx);
 
-        coin::from_balance(balance::split(&mut vault.target_balance, amount), ctx)
+        coin::from_balance(balance::split(&mut vault.balance_b, amount), ctx)
     }
 
-    public(package) fun return_sui<T>(
-        vault: &mut Vault<T>,
-        coin: Coin<SUI>
+    public(package) fun return_a<A, B>(
+        vault: &mut Vault<A, B>,
+        coin: Coin<A>
     ) {
-        balance::join(&mut vault.sui_balance, coin::into_balance(coin));
+        balance::join(&mut vault.balance_a, coin::into_balance(coin));
     }
 
-    public(package) fun return_target<T>(
-        vault: &mut Vault<T>,
-        coin: Coin<T>
+    public(package) fun return_b<A, B>(
+        vault: &mut Vault<A, B>,
+        coin: Coin<B>
     ) {
-        balance::join(&mut vault.target_balance, coin::into_balance(coin));
+        balance::join(&mut vault.balance_b, coin::into_balance(coin));
     }
 
     // ==================== PUBLIC VIEWS ====================
 
-    public fun sui_balance<T>(vault: &Vault<T>): u64 { balance::value(&vault.sui_balance) }
-    public fun target_balance<T>(vault: &Vault<T>): u64 { balance::value(&vault.target_balance) }
-    public fun total_shares<T>(vault: &Vault<T>): u64 { vault.total_shares }
-    public fun paused<T>(vault: &Vault<T>): bool { vault.paused }
-    public fun name<T>(vault: &Vault<T>): String { vault.name }
+    public fun balance_a<A, B>(vault: &Vault<A, B>): u64 { balance::value(&vault.balance_a) }
+    public fun balance_b<A, B>(vault: &Vault<A, B>): u64 { balance::value(&vault.balance_b) }
+    public fun total_shares<A, B>(vault: &Vault<A, B>): u64 { vault.total_shares }
+    public fun paused<A, B>(vault: &Vault<A, B>): bool { vault.paused }
+    public fun name<A, B>(vault: &Vault<A, B>): String { vault.name }
 
     // ==================== SHARE SPLIT/JOIN (Sui-Native share coin support) ====================
 

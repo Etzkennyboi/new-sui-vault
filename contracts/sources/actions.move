@@ -1,6 +1,5 @@
 module suisyndicate::actions {
-    use sui::coin::{Self, Coin};
-    use sui::sui::SUI;
+    use sui::coin::{Coin};
     use suisyndicate::vault::{Self, Vault};
     use suisyndicate::agent_cap::AgentCap;
 
@@ -15,60 +14,60 @@ module suisyndicate::actions {
     public struct SwapReceipt {
         vault_id: ID,
         borrowed_amount: u64,
-        is_sui: bool
+        is_asset_a: bool
     }
 
     // ==================== FLASH SWAP RECEIPTS ====================
 
-    public fun initiate_swap_sui<T>(
-        vault: &mut Vault<T>,
+    public fun initiate_swap_a<A, B>(
+        vault: &mut Vault<A, B>,
         cap: &mut AgentCap,
         amount: u64,
         ctx: &mut TxContext
-    ): (Coin<SUI>, SwapReceipt) {
-        let coin = vault::borrow_sui(vault, cap, amount, ctx);
+    ): (Coin<A>, SwapReceipt) {
+        let coin = vault::borrow_a(vault, cap, amount, ctx);
         let receipt = SwapReceipt {
             vault_id: object::id(vault),
             borrowed_amount: amount,
-            is_sui: true
+            is_asset_a: true
         };
         (coin, receipt)
     }
 
-    public fun resolve_swap_sui<T>(
-        vault: &mut Vault<T>,
+    public fun resolve_swap_a<A, B>(
+        vault: &mut Vault<A, B>,
         receipt: SwapReceipt,
-        target_coin: Coin<T>
+        coin_b: Coin<B>
     ) {
-        let SwapReceipt { vault_id, borrowed_amount: _, is_sui } = receipt;
+        let SwapReceipt { vault_id, borrowed_amount: _, is_asset_a } = receipt;
         assert!(vault_id == object::id(vault), EVaultIdMismatch);
-        assert!(is_sui, EAssetTypeMismatch);
-        vault::return_target(vault, target_coin);
+        assert!(is_asset_a, EAssetTypeMismatch);
+        vault::return_b(vault, coin_b);
     }
 
-    public fun initiate_swap_target<T>(
-        vault: &mut Vault<T>,
+    public fun initiate_swap_b<A, B>(
+        vault: &mut Vault<A, B>,
         cap: &mut AgentCap,
         amount: u64,
         ctx: &mut TxContext
-    ): (Coin<T>, SwapReceipt) {
-        let coin = vault::borrow_target(vault, cap, amount, ctx);
+    ): (Coin<B>, SwapReceipt) {
+        let coin = vault::borrow_b(vault, cap, amount, ctx);
         let receipt = SwapReceipt {
             vault_id: object::id(vault),
             borrowed_amount: amount,
-            is_sui: false
+            is_asset_a: false
         };
         (coin, receipt)
     }
 
-    public fun resolve_swap_target<T>(
-        vault: &mut Vault<T>,
+    public fun resolve_swap_b<A, B>(
+        vault: &mut Vault<A, B>,
         receipt: SwapReceipt,
-        sui_coin: Coin<SUI>
+        coin_a: Coin<A>
     ) {
-        let SwapReceipt { vault_id, borrowed_amount: _, is_sui } = receipt;
+        let SwapReceipt { vault_id, borrowed_amount: _, is_asset_a } = receipt;
         assert!(vault_id == object::id(vault), EVaultIdMismatch);
-        assert!(!is_sui, EAssetTypeMismatch);
-        vault::return_sui(vault, sui_coin);
+        assert!(!is_asset_a, EAssetTypeMismatch);
+        vault::return_a(vault, coin_a);
     }
 }

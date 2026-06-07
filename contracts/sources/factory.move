@@ -15,14 +15,14 @@ module suisyndicate::factory {
         transfer::share_object(factory);
     }
 
-    public fun create_vault<T>(
+    public fun create_vault<A, B>(
         factory: &mut Factory,
         name: String,
         strategy_blob: vector<u8>,
         metadata_blob: vector<u8>,
         ctx: &mut TxContext
     ): CreatorCap {
-        let (vault, creator_cap) = vault::create_vault<T>(name, strategy_blob, metadata_blob, ctx);
+        let (vault, creator_cap) = vault::create_vault<A, B>(name, strategy_blob, metadata_blob, ctx);
         let vault_id = object::id(&vault);
 
         vector::push_back(&mut factory.vaults, vault_id);

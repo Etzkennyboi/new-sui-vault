@@ -28,7 +28,8 @@ async function run() {
   const sdk = new SuiSyndicateClient(suiClient, walrusClient, {
     packageId: PACKAGE_ID,
     factoryId: FACTORY_ID,
-    targetCoinType: TARGET_COIN_TYPE,
+    coinTypeA: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::ssui::SSUI',
+    coinTypeB: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::susdc::SUSDC',
   });
 
   const agentKeypair = SuiSyndicateClient.getKeypairFromPrivateKey(PRIVATE_KEY);

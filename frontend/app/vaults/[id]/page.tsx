@@ -133,11 +133,12 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
     if (!vaultId) return;
     setLoadingLogs(true);
     try {
-      const TARGET_COIN_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
+      const SSUI_COIN_TYPE = '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::ssui::SSUI';
+      const SUSDC_COIN_TYPE = '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::susdc::SUSDC';
       const sdk = new SuiSyndicateClient(
         createTatumClient({ apiKey: '', rpcUrl: 'https://sui-mainnet.gateway.tatum.io' }),
         new WalrusClient(WALRUS_PUBLISHER, WALRUS_AGGREGATOR),
-        { packageId: PACKAGE_ID, factoryId: 'dummy', targetCoinType: TARGET_COIN_TYPE }
+        { packageId: PACKAGE_ID, factoryId: 'dummy', coinTypeA: SSUI_COIN_TYPE, coinTypeB: SUSDC_COIN_TYPE }
       );
       
       const realLogs = await sdk.getVaultLogs(vaultId);

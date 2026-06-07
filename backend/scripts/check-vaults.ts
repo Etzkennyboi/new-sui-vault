@@ -14,7 +14,8 @@ async function run() {
   const sdk = new SuiSyndicateClient(suiClient, walrusClient, {
     packageId: process.env.FACTORY_PACKAGE_ID || '',
     factoryId: '',
-    targetCoinType: '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC',
+    coinTypeA: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::ssui::SSUI',
+    coinTypeB: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::susdc::SUSDC',
   });
 
   const oldVaultId = '0xadd7421d3d113e9078f64e6ef53411547a0e07eb93e75717a208b110aea3f84e';
