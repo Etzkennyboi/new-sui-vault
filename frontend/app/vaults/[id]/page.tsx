@@ -167,6 +167,11 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
     try {
       const txb = new Transaction();
       const amountMist = parseFloat(depositAmount) * 1e9;
+      
+      if (amountMist > Number(suiBalance?.totalBalance || 0)) {
+        throw new Error('Insufficient SUI balance in wallet.');
+      }
+      
       const [suiCoin] = txb.splitCoins(txb.gas, [txb.pure.u64(amountMist)]);
 
       const vaultConfig = officialVaults.find(v => v.id === vaultId);
@@ -180,7 +185,15 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
 
       txb.transferObjects([shareObj], txb.pure.address(currentAccount.address));
 
-      await signAndExecuteTransaction({ transaction: txb as any });
+      const result = await signAndExecuteTransaction({ 
+        transaction: txb as any,
+        options: { showEffects: true }
+      });
+      
+      if (result.effects?.status?.status === 'failure') {
+        throw new Error(`Transaction failed on-chain: ${result.effects.status.error}`);
+      }
+      
       alert('Deposit successful!');
       
       // Instantly trigger AI rebalance API
@@ -220,7 +233,15 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
 
       txb.transferObjects([suiCoin, usdcCoin], txb.pure.address(currentAccount.address));
 
-      await signAndExecuteTransaction({ transaction: txb as any });
+      const result = await signAndExecuteTransaction({ 
+        transaction: txb as any,
+        options: { showEffects: true }
+      });
+      
+      if (result.effects?.status?.status === 'failure') {
+        throw new Error(`Transaction failed on-chain: ${result.effects.status.error}`);
+      }
+      
       alert('Ragequit completed!');
       fetchUserShares();
       fetchVaultState();
