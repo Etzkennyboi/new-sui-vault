@@ -5,6 +5,9 @@ export interface OfficialVault {
   description: string;
   agentCapId: string;
   coinType: string;
+  tvl?: string;
+  apy?: string;
+  risk?: string;
 }
 
 export const officialVaults: OfficialVault[] = [
