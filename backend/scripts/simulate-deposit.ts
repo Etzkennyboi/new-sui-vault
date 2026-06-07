@@ -33,9 +33,9 @@ async function run() {
 
   const agentKeypair = SuiSyndicateClient.getKeypairFromPrivateKey(PRIVATE_KEY);
   
-  console.log(`Depositing 0.02 SUI (20000000 MIST) into Vault ${VAULT_ID}...`);
+  console.log(`Depositing 4 SUI (4000000000 MIST) into Vault ${VAULT_ID}...`);
   try {
-    const shareId = await sdk.depositSui(agentKeypair, VAULT_ID, 20000000);
+    const shareId = await sdk.depositSui(agentKeypair, VAULT_ID, 4000000000);
     console.log(`Deposit successful! Received SyndicateShare: ${shareId}`);
   } catch (err) {
     console.error('Deposit failed:', err);

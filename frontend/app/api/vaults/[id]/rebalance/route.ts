@@ -120,7 +120,13 @@ export async function POST(request: NextRequest, context: any) {
     const agentAddress = agentKeypair.getPublicKey().toSuiAddress();
 
     const vaultState = await sdk.getVaultState(vaultId);
-    const strategy = await walrusClient.getBlob(vaultState.strategyBlobId);
+    let strategy;
+    try {
+      strategy = await walrusClient.getBlob(vaultState.strategyBlobId);
+    } catch (err) {
+      console.warn(`Failed to retrieve strategy blob from Walrus. Using fallback strategy.`);
+      strategy = { strategy_type: 'target_allocation', parameters: { target_allocation_sui_pct: 50, target_allocation_usdc_pct: 50, ai_rebalance_trigger_threshold_pct: 2 } };
+    }
     const liveExchangeRate = await fetchPythSuiPrice();
     const logs = await sdk.getVaultLogs(vaultId);
     const lastLog = logs.length > 0 ? logs[0] : null;

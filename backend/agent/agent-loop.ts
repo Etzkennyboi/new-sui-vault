@@ -124,13 +124,41 @@ Rule: If the current price has moved significantly away from the last execution 
     text = text.replace(/```json/g, '').replace(/```/g, '').trim();
     return JSON.parse(text);
   } catch (err: any) {
-    console.error('Failed to communicate with DeepSeek:', err.message);
-    return {
-      should_rebalance: false,
-      action: 'none',
-      amount_mist: 0,
-      reasoning: 'DeepSeek rate-limited/failed. No action taken.',
-    };
+    console.error(`Failed to communicate with DeepSeek: ${err.message}`);
+    
+    // Intelligent Fallback: Calculate rebalance locally if AI API is down
+    if (strategy.strategy_type === 'target_allocation') {
+      const suiValueUsdc = (vaultState.suiBalance / 1e9) * liveExchangeRate * 1e6;
+      const usdcValue = vaultState.usdcBalance;
+      const totalValueUsdc = suiValueUsdc + usdcValue;
+      
+      const targetSuiPct = strategy.parameters.target_allocation_sui_pct / 100;
+      const targetSuiValueUsdc = totalValueUsdc * targetSuiPct;
+      const currentSuiPct = totalValueUsdc > 0 ? (suiValueUsdc / totalValueUsdc) * 100 : 0;
+      
+      if (Math.abs(currentSuiPct - strategy.parameters.target_allocation_sui_pct) > (strategy.parameters.ai_rebalance_trigger_threshold_pct || 2)) {
+        if (suiValueUsdc > targetSuiValueUsdc) {
+          const usdcToBuy = suiValueUsdc - targetSuiValueUsdc;
+          const suiToSell = (usdcToBuy / 1e6) / liveExchangeRate * 1e9;
+          return {
+            should_rebalance: true,
+            action: 'swap_sui_to_usdc',
+            amount_mist: Math.floor(suiToSell),
+            reasoning: 'Local deterministic fallback: NVIDIA API timed out. Swapping excess SUI to restore target allocation.'
+          };
+        } else {
+          const usdcToSell = targetSuiValueUsdc - suiValueUsdc;
+          return {
+            should_rebalance: true,
+            action: 'swap_usdc_to_sui',
+            amount_mist: Math.floor(usdcToSell),
+            reasoning: 'Local deterministic fallback: NVIDIA API timed out. Swapping excess USDC to restore target allocation.'
+          };
+        }
+      }
+    }
+    
+    return { should_rebalance: false, action: 'none', amount_mist: 0, reasoning: 'DeepSeek rate-limited/failed. No action taken.' };
   }
 }
 
