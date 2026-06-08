@@ -566,15 +566,32 @@ export class SuiSyndicateClient {
     if (raw.error || !raw.data?.content) {
       throw new Error(`Failed to load vault ${vaultId}: ${JSON.stringify(raw.error)}`);
     }
-
     const fields = (raw.data.content as any).fields;
     const strategyBlob = Buffer.from(fields.walrus_strategy_blob).toString('utf-8');
     const metadataBlob = Buffer.from(fields.walrus_metadata_blob).toString('utf-8');
 
-    const parseBalance = (bal: any): number => {
-      if (!bal) return 0;
-      if (typeof bal === 'string') return parseInt(bal, 10);
-      if (typeof bal === 'object' && bal.fields?.value) return parseInt(bal.fields.value, 10);
+    const parseBalance = (bal: any, name: string): number => {
+      try {
+        if (!bal) return 0;
+        const balStr = String(bal);
+        if (balStr === '[object Object]') {
+          if (bal.fields && bal.fields.value) {
+            const parsed = parseInt(String(bal.fields.value), 10);
+            return isNaN(parsed) ? 0 : parsed;
+          }
+        }
+        if (typeof bal === 'string') {
+          const parsed = parseInt(bal, 10);
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        if (typeof bal === 'object' && bal.fields?.value) {
+          const parsed = parseInt(String(bal.fields.value), 10);
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        if (typeof bal === 'number') return isNaN(bal) ? 0 : bal;
+      } catch (e) {
+        console.log(`Error parsing balance ${name}:`, e);
+      }
       return 0;
     };
 
@@ -582,12 +599,13 @@ export class SuiSyndicateClient {
       id: vaultId,
       name: fields.name,
       creator: fields.creator,
-      suiBalance: parseBalance(fields.balance_a), // balance of A (sSUI)
-      usdcBalance: parseBalance(fields.balance_b), // balance of B (sUSDC)
-      totalShares: parseBalance(fields.total_shares),
+      suiBalance: parseBalance(fields.balance_a, 'suiBalance'), // balance of A (sSUI)
+      usdcBalance: parseBalance(fields.balance_b, 'usdcBalance'), // balance of B (sUSDC)
+      totalShares: parseBalance(fields.total_shares, 'totalShares'),
       strategyBlobId: strategyBlob,
       metadataBlobId: metadataBlob,
       paused: fields.paused,
+      agentCapId: process.env.AGENT_CAP_ID || '',
     };
   }
 
