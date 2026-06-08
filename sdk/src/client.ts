@@ -571,13 +571,20 @@ export class SuiSyndicateClient {
     const strategyBlob = Buffer.from(fields.walrus_strategy_blob).toString('utf-8');
     const metadataBlob = Buffer.from(fields.walrus_metadata_blob).toString('utf-8');
 
+    const parseBalance = (bal: any): number => {
+      if (!bal) return 0;
+      if (typeof bal === 'string') return parseInt(bal, 10);
+      if (typeof bal === 'object' && bal.fields?.value) return parseInt(bal.fields.value, 10);
+      return 0;
+    };
+
     return {
       id: vaultId,
       name: fields.name,
       creator: fields.creator,
-      suiBalance: parseInt(fields.balance_a || '0'), // balance of A (sSUI)
-      usdcBalance: parseInt(fields.balance_b || '0'), // balance of B (sUSDC)
-      totalShares: parseInt(fields.total_shares),
+      suiBalance: parseBalance(fields.balance_a), // balance of A (sSUI)
+      usdcBalance: parseBalance(fields.balance_b), // balance of B (sUSDC)
+      totalShares: parseBalance(fields.total_shares),
       strategyBlobId: strategyBlob,
       metadataBlobId: metadataBlob,
       paused: fields.paused,
