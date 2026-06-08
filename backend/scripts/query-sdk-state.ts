@@ -13,42 +13,21 @@ const WALRUS_PUBLISHER = process.env.WALRUS_PUBLISHER_URL || 'https://publisher.
 const WALRUS_AGGREGATOR = process.env.WALRUS_AGGREGATOR_URL || 'https://aggregator.walrus-testnet.walrus.space';
 
 const PACKAGE_ID = process.env.FACTORY_PACKAGE_ID || '';
-const FACTORY_ID = process.env.FACTORY_OBJECT_ID || '';
-const TARGET_COIN_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
+const VAULT_ID = process.env.VAULT_ID || '';
 
-async function run() {
-  console.log('--- Deploying Native USDC Vault ---');
-  if (!PRIVATE_KEY || !PACKAGE_ID || !FACTORY_ID) {
-    console.error('Missing config');
-    return;
-  }
-
+async function main() {
   const suiClient = createTatumClient({ apiKey: TATUM_API_KEY, rpcUrl: SUI_MAINNET_RPC });
   const walrusClient = new WalrusClient(WALRUS_PUBLISHER, WALRUS_AGGREGATOR);
   const sdk = new SuiSyndicateClient(suiClient, walrusClient, {
     packageId: PACKAGE_ID,
-    factoryId: FACTORY_ID,
+    factoryId: process.env.FACTORY_OBJECT_ID || '',
     coinTypeA: '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0x2::sui::SUI>',
     coinTypeB: '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC>',
   });
 
-  const agentKeypair = SuiSyndicateClient.getKeypairFromPrivateKey(PRIVATE_KEY);
-  const agentAddress = agentKeypair.getPublicKey().toSuiAddress();
-  
-  const strategyDoc = {
-    strategy_type: "target_allocation",
-    parameters: { target_allocation_sui_pct: 50, target_allocation_usdc_pct: 50, ai_rebalance_trigger_threshold_pct: 2 }
-  };
-  const metadataDoc = { name: "Native USDC 50/50 Strategy", description: "Autonomously rebalances SUI and Native USDC." };
-
-  console.log('Creating Vault...');
-  const { vaultId, creatorCapId } = await sdk.createVault(agentKeypair, "Native USDC 50/50", strategyDoc, metadataDoc);
-  console.log(`Vault Created! ID: ${vaultId}`);
-  console.log(`CreatorCap ID: ${creatorCapId}`);
-
-  console.log('Issuing Agent Cap...');
-  const agentCapId = await sdk.issueAgentCap(agentKeypair, creatorCapId, vaultId, agentAddress, 10000000000, 100000000000);
-  console.log(`AgentCap Issued! ID: ${agentCapId}`);
+  const state = await sdk.getVaultState(VAULT_ID);
+  console.log('--- Rebuilt SDK Vault Query ---');
+  console.log(JSON.stringify(state, null, 2));
 }
 
-run();
+main().catch(console.error);

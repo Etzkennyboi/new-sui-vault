@@ -575,8 +575,8 @@ export class SuiSyndicateClient {
       id: vaultId,
       name: fields.name,
       creator: fields.creator,
-      suiBalance: parseInt(fields.balance_a), // balance of A (sSUI)
-      usdcBalance: parseInt(fields.balance_b), // balance of B (sUSDC)
+      suiBalance: parseInt(fields.balance_a || '0'), // balance of A (sSUI)
+      usdcBalance: parseInt(fields.balance_b || '0'), // balance of B (sUSDC)
       totalShares: parseInt(fields.total_shares),
       strategyBlobId: strategyBlob,
       metadataBlobId: metadataBlob,
