@@ -12,6 +12,7 @@ export declare class SuiSyndicateClient {
     private walrusClient;
     private config;
     private SCALLOP_MARKET;
+    private SCALLOP_VERSION;
     private SCALLOP_PACKAGE;
     private SUI_TYPE;
     private USDC_TYPE;

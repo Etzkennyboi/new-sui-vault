@@ -9,8 +9,9 @@ export class SuiSyndicateClient {
     walrusClient;
     config;
     // Scallop Constants on Sui Mainnet
-    SCALLOP_MARKET = '0xefe8b36d5b2e43728cc323298626b8317784f128bc0882e307c6f092daffaa3b1a';
-    SCALLOP_PACKAGE = '0xefe8b36d5b2e43728cc323298626b8317784f128bc0882e307c6f092daffaa3b1a';
+    SCALLOP_MARKET = '0xa757975255146dc9686aa823b7838b507f315d704f428cbadad2f4ea061939d9';
+    SCALLOP_VERSION = '0x07871c4b3c847a0f674510d4978d5cf6f960452795e8ff6f189fd2088a3f6ac7';
+    SCALLOP_PACKAGE = '0xde5c09ad171544aa3724dc67216668c80e754860f419136a68d78504eb2e2805';
     SUI_TYPE = '0x2::sui::SUI';
     USDC_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
     constructor(suiClient, walrusClient, config) {
@@ -102,8 +103,9 @@ export class SuiSyndicateClient {
         const [suiCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountMist)]);
         // 2. Mint sSUI on Scallop
         const [sCoinA] = tx.moveCall({
-            target: `${this.SCALLOP_PACKAGE}::lending::mint`,
+            target: `${this.SCALLOP_PACKAGE}::mint::mint`,
             arguments: [
+                tx.object(this.SCALLOP_VERSION),
                 tx.object(this.SCALLOP_MARKET),
                 suiCoin,
                 tx.object('0x6'), // Clock
@@ -144,8 +146,9 @@ export class SuiSyndicateClient {
         });
         // 2. Redeem sSUI back to SUI
         const [suiCoin] = tx.moveCall({
-            target: `${this.SCALLOP_PACKAGE}::lending::redeem`,
+            target: `${this.SCALLOP_PACKAGE}::redeem::redeem`,
             arguments: [
+                tx.object(this.SCALLOP_VERSION),
                 tx.object(this.SCALLOP_MARKET),
                 sCoinA,
                 tx.object('0x6'),
@@ -154,8 +157,9 @@ export class SuiSyndicateClient {
         });
         // 3. Redeem sUSDC back to USDC
         const [usdcCoin] = tx.moveCall({
-            target: `${this.SCALLOP_PACKAGE}::lending::redeem`,
+            target: `${this.SCALLOP_PACKAGE}::redeem::redeem`,
             arguments: [
+                tx.object(this.SCALLOP_VERSION),
                 tx.object(this.SCALLOP_MARKET),
                 sCoinB,
                 tx.object('0x6'),
@@ -196,8 +200,9 @@ export class SuiSyndicateClient {
         });
         // 2. Redeem sSUI back to raw SUI on Scallop
         const [suiCoin] = tx.moveCall({
-            target: `${this.SCALLOP_PACKAGE}::lending::redeem`,
+            target: `${this.SCALLOP_PACKAGE}::redeem::redeem`,
             arguments: [
+                tx.object(this.SCALLOP_VERSION),
                 tx.object(this.SCALLOP_MARKET),
                 sCoinA,
                 tx.object('0x6'),
@@ -251,8 +256,9 @@ export class SuiSyndicateClient {
         });
         // 4. Mint sUSDC on Scallop
         const [sCoinB] = tx.moveCall({
-            target: `${this.SCALLOP_PACKAGE}::lending::mint`,
+            target: `${this.SCALLOP_PACKAGE}::mint::mint`,
             arguments: [
+                tx.object(this.SCALLOP_VERSION),
                 tx.object(this.SCALLOP_MARKET),
                 usdcCoin,
                 tx.object('0x6'),
@@ -296,8 +302,9 @@ export class SuiSyndicateClient {
         });
         // 2. Redeem sUSDC back to raw USDC on Scallop
         const [usdcCoin] = tx.moveCall({
-            target: `${this.SCALLOP_PACKAGE}::lending::redeem`,
+            target: `${this.SCALLOP_PACKAGE}::redeem::redeem`,
             arguments: [
+                tx.object(this.SCALLOP_VERSION),
                 tx.object(this.SCALLOP_MARKET),
                 sCoinB,
                 tx.object('0x6'),
@@ -351,8 +358,9 @@ export class SuiSyndicateClient {
         });
         // 4. Mint sSUI on Scallop
         const [sCoinA] = tx.moveCall({
-            target: `${this.SCALLOP_PACKAGE}::lending::mint`,
+            target: `${this.SCALLOP_PACKAGE}::mint::mint`,
             arguments: [
+                tx.object(this.SCALLOP_VERSION),
                 tx.object(this.SCALLOP_MARKET),
                 suiCoin,
                 tx.object('0x6'),
