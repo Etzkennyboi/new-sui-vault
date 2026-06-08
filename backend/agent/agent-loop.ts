@@ -324,7 +324,7 @@ async function runAgent() {
 
       if (vaultState.suiBalance === 0 && vaultState.usdcBalance === 0) {
         console.log('Vault is empty (0 SUI, 0 USDC). Skipping rebalance monitoring tick.');
-        const sleepMs = strategy.interval_ms || 15000;
+        const sleepMs = strategy.interval_ms || 600000; // 10 minutes
         await new Promise((resolve) => setTimeout(resolve, sleepMs));
         continue;
       }
@@ -510,14 +510,14 @@ async function runAgent() {
       );
       console.log(`ActionLog anchored to Sui in epoch ${currentEpoch}. Walrus Blob ID: ${logBlobId}`);
 
-      const sleepMs = strategy.interval_ms || 15000;
+      const sleepMs = strategy.interval_ms || 600000; // 10 minutes default
       console.log(`Sleeping for ${sleepMs / 1000} seconds...\n`);
       await new Promise((resolve) => setTimeout(resolve, sleepMs));
 
     } catch (err: any) {
       console.error('Error in agent loop tick:', err.message || err);
-      console.log('Sleeping for 15 seconds...\n');
-      await new Promise(r => setTimeout(r, 15000));
+      console.log('Sleeping for 600 seconds (10 minutes)...\n');
+      await new Promise(r => setTimeout(r, 600000));
     }
   }
 }
