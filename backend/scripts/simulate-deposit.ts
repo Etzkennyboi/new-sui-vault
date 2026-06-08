@@ -28,15 +28,15 @@ async function run() {
   const sdk = new SuiSyndicateClient(suiClient, walrusClient, {
     packageId: PACKAGE_ID,
     factoryId: FACTORY_ID,
-    coinTypeA: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::ssui::SSUI',
-    coinTypeB: '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::susdc::SUSDC',
+    coinTypeA: '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0x2::sui::SUI>',
+    coinTypeB: '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC>',
   });
 
   const agentKeypair = SuiSyndicateClient.getKeypairFromPrivateKey(PRIVATE_KEY);
   
-  console.log(`Depositing 4 SUI (4000000000 MIST) into Vault ${VAULT_ID}...`);
+  console.log(`Depositing 0.05 SUI (50000000 MIST) into Vault ${VAULT_ID}...`);
   try {
-    const shareId = await sdk.depositSui(agentKeypair, VAULT_ID, 4000000000);
+    const shareId = await sdk.depositSui(agentKeypair, VAULT_ID, 50000000);
     console.log(`Deposit successful! Received SyndicateShare: ${shareId}`);
   } catch (err) {
     console.error('Deposit failed:', err);

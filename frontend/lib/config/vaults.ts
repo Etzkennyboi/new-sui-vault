@@ -12,14 +12,14 @@ export interface OfficialVault {
 
 export const officialVaults: OfficialVault[] = [
   {
-    id: "0x287a655c5e28dfcb01f1b4d139852986dab7f1dcfb46282f5b58ed70153d19c8",
+    id: "0x32f1d0092b08a2852899a7c539da95846397fe6206bfadd8308c57d22d8bbe94",
     name: "Native USDC 50/50",
     tvl: "$0.00",
     apy: "12.4%",
     risk: "Medium",
-    strategy: "Maintain a strict 50% SUI and 50% USDC portfolio. Take profits into USDC when SUI spikes, and buy SUI when it dips.",
+    strategy: "Maintain a strict 50% SUI and 50% USDC portfolio. Take profits into USDC when SUI spikes, and buy SUI when it dips. All idle assets earn Scallop lending yield.",
     description: "The perfect vault for risk-averse investors who want exposure to SUI while maintaining a stablecoin cushion to buy the dips autonomously.",
-    agentCapId: "0xb27e48d6202543807a5f8895e64a8aca6dc42b1ae1acde78fa1be2a86d14f5d1",
+    agentCapId: "0x74c69079fa3fcc570aa985a425f712b8ebe5726b053d47268dee8d0db1c052e4",
     coinType: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC", // Native USDC
   },
   {

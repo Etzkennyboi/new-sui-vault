@@ -201,7 +201,7 @@ Rule: Compare current SUI allocation with target SUI allocation (${targetSuiPct}
       const stepsMoved = Math.floor(Math.abs(priceDiff) / stepSize);
       
       if (stepsMoved >= 1) {
-        const pctToSwap = Math.min(0.2 * stepsMoved, 0.8);
+        const pctToSwap = Math.min(0.2 * stepsMoved, 0.2); // Cap at 20% of vault per trade to prevent catastrophic slippage
         if (priceDiff > 0) {
           const amountMist = Math.floor(vaultState.suiBalance * pctToSwap);
           if (amountMist > 0.001 * 1e9) {
@@ -282,8 +282,8 @@ async function runAgent() {
     process.exit(1);
   }
 
-  const SSUI_COIN_TYPE = '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::ssui::SSUI';
-  const SUSDC_COIN_TYPE = '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::susdc::SUSDC';
+  const SSUI_COIN_TYPE = '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0x2::sui::SUI>';
+  const SUSDC_COIN_TYPE = '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC>';
   const suiClient = createTatumClient({ apiKey: TATUM_API_KEY, rpcUrl: SUI_MAINNET_RPC });
   const walrusClient = new WalrusClient(WALRUS_PUBLISHER, WALRUS_AGGREGATOR);
   const sdk = new SuiSyndicateClient(suiClient, walrusClient, {
@@ -351,9 +351,14 @@ async function runAgent() {
         if (closestLog && minDiff < 4 * 3600 * 1000) {
           strategy.parameters.historical_price = closestLog.prices?.SUI_USDC || liveExchangeRate;
           console.log(`Resolved historical price from logs at ${new Date(closestLog.timestamp).toISOString()}: $${strategy.parameters.historical_price}`);
+        } else if (logs.length > 0) {
+          // Use the oldest available log as historical price anchor instead of current price
+          const oldestLog = logs[logs.length - 1];
+          strategy.parameters.historical_price = oldestLog.prices?.SUI_USDC || liveExchangeRate;
+          console.log(`No log near target time. Using oldest log at ${new Date(oldestLog.timestamp).toISOString()}: $${strategy.parameters.historical_price}`);
         } else {
-          console.log(`No historical log found near ${new Date(targetTime).toISOString()}. Using default parameter: $${strategy.parameters.historical_price || liveExchangeRate}`);
-          strategy.parameters.historical_price = strategy.parameters.historical_price || liveExchangeRate;
+          strategy.parameters.historical_price = liveExchangeRate;
+          console.log(`No historical logs available. Momentum strategy inactive until log history accumulates.`);
         }
       }
 
@@ -451,11 +456,38 @@ async function runAgent() {
           );
         }
         console.log(`Swap executed successfully on Cetus. Tx Digest: ${txDigest}`);
+
+        // Post-swap slippage verification
+        try {
+          const postSwapState = await sdk.getVaultState(VAULT_ID);
+          const preA = vaultState.suiBalance;
+          const preB = vaultState.usdcBalance;
+          const postA = postSwapState.suiBalance;
+          const postB = postSwapState.usdcBalance;
+
+          if (decision.action === 'swap_sui_to_usdc') {
+            const actualGained = postB - preB;
+            if (actualGained < strictMinOut) {
+              console.warn(`⚠️ SLIPPAGE WARNING: Expected min ${strictMinOut} sUSDC, got ${actualGained}. Slippage exceeded 2%!`);
+            } else {
+              console.log(`✅ Slippage OK: Received ${actualGained} sUSDC (min was ${strictMinOut})`);
+            }
+          } else if (decision.action === 'swap_usdc_to_sui') {
+            const actualGained = postA - preA;
+            if (actualGained < strictMinOut) {
+              console.warn(`⚠️ SLIPPAGE WARNING: Expected min ${strictMinOut} sSUI, got ${actualGained}. Slippage exceeded 2%!`);
+            } else {
+              console.log(`✅ Slippage OK: Received ${actualGained} sSUI (min was ${strictMinOut})`);
+            }
+          }
+        } catch (verifyErr: any) {
+          console.warn(`Slippage verification skipped: ${verifyErr.message}`);
+        }
       } else {
         console.log('No swap executed based on AI decision.');
       }
 
-      const currentEpoch = "0";
+      const currentEpoch = String(Date.now());
       const logPayload = {
         timestamp: Date.now(),
         vault_id: VAULT_ID,

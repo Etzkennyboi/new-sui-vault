@@ -11,9 +11,18 @@ import { SuiSyndicateClient } from '../../../../sdk/src/client';
 import { createTatumClient } from '../../../../sdk/src/tatum';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID || '0x8509610948b6437c3a9dd841af6f1083a3481adaa521625d18c90d08e05b10e9';
+const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID || '0x7b945229d1f1c2336be7100fab81212596e6ad3ed57f97ee6e4a1e92f2098571';
 const WALRUS_PUBLISHER = 'https://publisher.walrus-testnet.walrus.space';
 const WALRUS_AGGREGATOR = 'https://aggregator.walrus-testnet.walrus.space';
+
+// Scallop Protocol Constants
+const SCALLOP_PACKAGE = '0xde5c09ad171544aa3724dc67216668c80e754860f419136a68d78504eb2e2805';
+const SCALLOP_VERSION = '0x07871c4b3c847a0f674510d4978d5cf6f960452795e8ff6f189fd2088a3f6ac7';
+const SCALLOP_MARKET = '0xa757975255146dc9686aa823b7838b507f315d704f428cbadad2f4ea061939d9';
+const SUI_TYPE = '0x2::sui::SUI';
+const USDC_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
+const MARKET_COIN_SUI = '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0x2::sui::SUI>';
+const MARKET_COIN_USDC = '0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf::reserve::MarketCoin<0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC>';
 
 import { officialVaults } from '../../../lib/config/vaults';
 
@@ -133,12 +142,10 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
     if (!vaultId) return;
     setLoadingLogs(true);
     try {
-      const SSUI_COIN_TYPE = '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::ssui::SSUI';
-      const SUSDC_COIN_TYPE = '0x2702b6cae761cd63ac87522d7011d7d0b3677e9684980e4438403a67a3d8f24f::susdc::SUSDC';
       const sdk = new SuiSyndicateClient(
         createTatumClient({ apiKey: '', rpcUrl: 'https://sui-mainnet.gateway.tatum.io' }),
         new WalrusClient(WALRUS_PUBLISHER, WALRUS_AGGREGATOR),
-        { packageId: PACKAGE_ID, factoryId: 'dummy', coinTypeA: SSUI_COIN_TYPE, coinTypeB: SUSDC_COIN_TYPE }
+        { packageId: PACKAGE_ID, factoryId: 'dummy', coinTypeA: MARKET_COIN_SUI, coinTypeB: MARKET_COIN_USDC }
       );
       
       const realLogs = await sdk.getVaultLogs(vaultId);
@@ -173,15 +180,26 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
         throw new Error('Insufficient SUI balance in wallet.');
       }
       
+      // 1. Split raw SUI from gas
       const [suiCoin] = txb.splitCoins(txb.gas, [txb.pure.u64(amountMist)]);
 
-      const vaultConfig = officialVaults.find(v => v.id === vaultId);
-      const coinType = vaultConfig?.coinType || '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
+      // 2. Mint sSUI on Scallop (wrap SUI into MarketCoin<SUI>)
+      const [sCoinA] = txb.moveCall({
+        target: `${SCALLOP_PACKAGE}::mint::mint`,
+        arguments: [
+          txb.object(SCALLOP_VERSION),
+          txb.object(SCALLOP_MARKET),
+          suiCoin,
+          txb.object('0x6'), // Clock
+        ],
+        typeArguments: [SUI_TYPE],
+      });
 
+      // 3. Deposit sSUI into the vault
       const [shareObj] = txb.moveCall({
-        target: `${PACKAGE_ID}::vault::deposit_sui`,
-        typeArguments: [coinType],
-        arguments: [txb.object(vaultId), suiCoin],
+        target: `${PACKAGE_ID}::vault::deposit_a`,
+        typeArguments: [MARKET_COIN_SUI, MARKET_COIN_USDC],
+        arguments: [txb.object(vaultId), sCoinA],
       });
 
       txb.transferObjects([shareObj], txb.pure.address(currentAccount.address));
@@ -215,13 +233,36 @@ export default function VaultDashboard({ params }: { params: Promise<{ id: strin
       if (!shareObjectId || !shareObjectId.startsWith('0x')) {
         throw new Error('Please enter a valid SyndicateShare Object ID');
       }
-      const vaultConfig = officialVaults.find(v => v.id === vaultId);
-      const coinType = vaultConfig?.coinType || '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
 
-      const [suiCoin, usdcCoin] = txb.moveCall({
+      // 1. Ragequit: burn share, get back sSUI + sUSDC
+      const [sCoinA, sCoinB] = txb.moveCall({
         target: `${PACKAGE_ID}::vault::ragequit`,
-        typeArguments: [coinType],
+        typeArguments: [MARKET_COIN_SUI, MARKET_COIN_USDC],
         arguments: [txb.object(vaultId), txb.object(shareObjectId)],
+      });
+
+      // 2. Redeem sSUI back to raw SUI via Scallop
+      const [suiCoin] = txb.moveCall({
+        target: `${SCALLOP_PACKAGE}::redeem::redeem`,
+        arguments: [
+          txb.object(SCALLOP_VERSION),
+          txb.object(SCALLOP_MARKET),
+          sCoinA,
+          txb.object('0x6'), // Clock
+        ],
+        typeArguments: [SUI_TYPE],
+      });
+
+      // 3. Redeem sUSDC back to raw USDC via Scallop
+      const [usdcCoin] = txb.moveCall({
+        target: `${SCALLOP_PACKAGE}::redeem::redeem`,
+        arguments: [
+          txb.object(SCALLOP_VERSION),
+          txb.object(SCALLOP_MARKET),
+          sCoinB,
+          txb.object('0x6'), // Clock
+        ],
+        typeArguments: [USDC_TYPE],
       });
 
       txb.transferObjects([suiCoin, usdcCoin], txb.pure.address(currentAccount.address));
